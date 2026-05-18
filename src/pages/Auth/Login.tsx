@@ -108,11 +108,11 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-slate-400 text-sm">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-                Sign up free
+          <div className="mt-6 text-center border-t border-white/10 pt-5">
+            <p className="text-slate-400 text-xs leading-relaxed">
+              ZenBid Pro is an invite-only platform. Not a member yet?{' '}
+              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors block mt-1">
+                Learn how to get access →
               </Link>
             </p>
           </div>
