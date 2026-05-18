@@ -14,18 +14,6 @@ export default defineConfig({
     host: '0.0.0.0',
   },
   build: {
-    chunkSizeWarningLimit: 1500,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('@supabase')) return 'vendor-supabase';
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'vendor-react';
-            if (id.includes('lucide')) return 'vendor-lucide';
-            return 'vendor'; // all other node_modules
-          }
-        }
-      }
-    }
+    chunkSizeWarningLimit: 2000,
   },
 });
