@@ -17,6 +17,33 @@ import EstimatorWorkspace from './pages/EstimatorWorkspace';
 import PriceBook from './pages/PriceBook';
 import Settings from './pages/Settings';
 import ClientPortal from './pages/ClientPortal';
+import LandingPage from './pages/LandingPage';
+
+// Shows landing page to guests, redirects authenticated users to /dashboard
+function SmartRoot() {
+  const [session, setSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(!!session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(!!session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (session === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (session) return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<boolean | null>(null);
@@ -25,11 +52,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(!!session);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(!!session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -41,10 +66,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!session) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -70,22 +92,26 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" richColors closeButton />
       <Routes>
-        {/* Public routes */}
+        {/* Public landing page (smart: redirects to /dashboard if logged in) */}
+        <Route path="/" element={<SmartRoot />} />
+
+        {/* Auth routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        {/* Public client portal */}
         <Route path="/approve/:shareToken" element={<ClientPortal />} />
 
-        {/* Protected routes */}
-        <Route path="/" element={<ProtectedRoute><AppLayout><Navigate to="/dashboard" replace /></AppLayout></ProtectedRoute>} />
+        {/* Protected app routes */}
         <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><AppLayout><Projects /></AppLayout></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><AppLayout><EstimatorWorkspace /></AppLayout></ProtectedRoute>} />
         <Route path="/price-book" element={<ProtectedRoute><AppLayout><PriceBook /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Catch-all → landing page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
