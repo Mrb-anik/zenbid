@@ -365,6 +365,35 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ── Corner watermark ── */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '14px',
+          right: '18px',
+          opacity: 0.18,
+          zIndex: 9999,
+          pointerEvents: 'none',
+          transform: 'rotate(-1.5deg)',
+          transition: 'opacity 0.4s ease',
+          fontFamily: "'Courier New', Courier, monospace",
+          fontSize: '10px',
+          fontStyle: 'italic',
+          letterSpacing: '0.08em',
+          color: '#a5b4fc',
+          lineHeight: 1.4,
+          textAlign: 'right',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '0.55')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.18')}
+      >
+        <span style={{ display: 'block', fontSize: '7px', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '2px', color: '#818cf8' }}>
+          built by
+        </span>
+        MAHMUD R B
+      </div>
     </div>
   );
 }
