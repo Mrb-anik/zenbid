@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.notify-contractor]
 verify_jwt = false
+
+[functions.admin-manager]
+verify_jwt = true

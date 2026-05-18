@@ -14,9 +14,11 @@ export interface Profile {
   default_material_markup: number;
   default_equipment_markup: number;
   default_tax_rate: number;
+  is_admin?: boolean;
   created_at?: string;
   updated_at?: string;
 }
+
 
 export interface Project {
   id: string;
