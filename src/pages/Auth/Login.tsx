@@ -37,7 +37,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ background: 'linear-gradient(160deg, #0A1024 0%, #1C2B5C 50%, #0A1024 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-navy-900">
       {/* Background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ background: 'rgba(28,43,92,0.4)' }} />

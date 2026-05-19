@@ -5,35 +5,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // PeakEstimator brand palette
+        // PeakEstimator Enterprise Palette
         navy: {
-          DEFAULT: '#1C2B5C',
-          50:  '#EEF0F8',
-          100: '#D3D8EF',
-          200: '#A8B1DF',
-          300: '#7D8ACF',
-          400: '#5263BF',
-          500: '#2E449F',
-          600: '#1C2B5C',
-          700: '#162249',
-          800: '#101937',
-          900: '#0A1024',
+          DEFAULT: '#0F172A',
+          800: '#1E293B',
+          900: '#0F172A',
         },
         copper: {
-          DEFAULT: '#C07840',
-          50:  '#FAF2E9',
-          100: '#F4E4D2',
-          200: '#E9C8A6',
-          300: '#DDAD79',
-          400: '#D2914C',
-          500: '#C07840',
-          600: '#9F6133',
-          700: '#7F4B26',
-          800: '#5E361A',
-          900: '#3D210E',
+          DEFAULT: '#C58B5C',
+          50:  '#FDF8F5',
+          100: '#F9EFE8',
+          200: '#F0D5C1',
+          300: '#E7BB9A',
+          400: '#DEA173',
+          500: '#C58B5C',
+          600: '#A46F46',
+          700: '#845431',
+          800: '#643C1F',
+          900: '#472712',
         },
-        // Keep slate for neutrals
-        dark: '#0A1024',
+        gold: {
+          DEFAULT: '#D9A679',
+        },
+        app: {
+          bg: '#F8FAFC',
+          card: '#FFFFFF',
+          border: '#E2E8F0',
+        },
+        text: {
+          primary: '#111827',
+          secondary: '#64748B',
+        },
+        status: {
+          success: '#10B981',
+          danger: '#EF4444',
+        }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -45,15 +51,11 @@ const config: Config = {
         '4xl': '2rem',
       },
       boxShadow: {
-        'navy':  '0 10px 30px -5px rgba(28, 43, 92, 0.35)',
-        'copper': '0 10px 30px -5px rgba(192, 120, 64, 0.35)',
-        'card':  '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06)',
-        'glow-navy': '0 0 40px rgba(28, 43, 92, 0.25)',
-        'glow-copper': '0 0 40px rgba(192, 120, 64, 0.3)',
+        'soft': '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
+        'card': '0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03)',
       },
       backgroundImage: {
-        'peak-hero': 'linear-gradient(135deg, #0A1024 0%, #1C2B5C 50%, #0A1024 100%)',
-        'peak-copper': 'linear-gradient(135deg, #C07840, #D2914C)',
+        'peak-hero': 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
       },
       animation: {
         'fade-in':    'fadeIn 0.25s ease-out forwards',

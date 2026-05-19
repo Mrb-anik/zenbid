@@ -19,7 +19,7 @@ const FEATURES = [
 function PeakLogo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="64" height="64" rx="12" fill="#1C2B5C"/>
+      <rect width="64" height="64" rx="12" fill="#0F172A"/>
       <polygon points="32,8 6,56 58,56" fill="none" stroke="#C07840" strokeWidth="2.5" strokeLinejoin="round"/>
       <polyline points="18,50 26,28 32,40 38,28 46,50" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
       <line x1="36" y1="16" x2="52" y2="30" stroke="#C07840" strokeWidth="2.5" strokeLinecap="round"/>
@@ -88,10 +88,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="pt-24 pb-20 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #0A1024 0%, #1C2B5C 45%, #0F1A3A 100%)' }}>
-        {/* Ambient glows */}
-        <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-copper-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-navy-600/20 rounded-full blur-3xl pointer-events-none" />
+      <section className="pt-24 pb-20 relative overflow-hidden bg-navy-900">
         {/* Mountain silhouette */}
         <svg className="absolute bottom-0 left-0 right-0 w-full opacity-5 pointer-events-none" viewBox="0 0 1440 200" preserveAspectRatio="none">
           <polygon points="0,200 360,40 720,120 1080,20 1440,200" fill="white"/>
@@ -105,10 +102,8 @@ export default function LandingPage() {
 
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-[1.05] mb-6 tracking-tight animate-slide-up">
             The Bid You Build in{' '}
-            <span className="relative inline-block">
-              <span style={{ background: 'linear-gradient(135deg, #D2914C, #C07840)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                5 Minutes
-              </span>
+            <span className="text-copper-500">
+              5 Minutes
             </span>
             <br className="hidden sm:block" />
             {' '}Wins the Job They Quoted in 2 Days.
@@ -121,7 +116,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <a href="#waitlist" id="hero-cta-btn" className="inline-flex items-center gap-2.5 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-xl hover:-translate-y-1 w-full sm:w-auto justify-center" style={{ background: 'linear-gradient(135deg, #C07840, #D2914C)' }}>
+            <a href="#waitlist" id="hero-cta-btn" className="inline-flex items-center gap-2.5 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-card bg-copper-500 hover:bg-copper-600 hover:-translate-y-1 w-full sm:w-auto justify-center">
               Request Early Access <ArrowRight className="w-5 h-5" />
             </a>
             <Link to="/login" className="text-slate-300 hover:text-white text-sm font-medium transition-colors">
@@ -140,7 +135,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── STATS STRIP ─────────────────────────────────── */}
-      <section className="py-8 bg-navy-600 border-y border-navy-700">
+      <section className="py-8 bg-navy-800 border-y border-navy-900">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
             { val: '93+', label: 'Price Book Items' },
@@ -165,7 +160,7 @@ export default function LandingPage() {
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 leading-tight">
               Your Work Is Elite.<br />
-              <span style={{ background: 'linear-gradient(135deg, #C07840, #D2914C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span className="text-copper-600">
                 Your Proposals Should Match.
               </span>
             </h2>
@@ -206,8 +201,7 @@ export default function LandingPage() {
               { step: '02', emoji: '📱', title: 'Send a Link, Not a PDF', desc: 'One tap. Your client gets a clean, branded proposal on their phone. They can read it, review it, and sign it right there.' },
               { step: '03', emoji: '✅', title: 'The Signature Comes to You', desc: 'The moment they approve, your dashboard lights up. The job is locked. Drive to the next one.' },
             ].map(item => (
-              <div key={item.step} className="group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-card hover:shadow-navy hover:-translate-y-1 transition-all overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(225deg, rgba(28,43,92,0.06), transparent)' }} />
+              <div key={item.step} className="group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-card hover:shadow-soft hover:-translate-y-1 transition-all overflow-hidden">
                 <div className="text-4xl mb-4">{item.emoji}</div>
                 <div className="text-xs font-bold text-copper-500 mb-2 tracking-widest uppercase">Step {item.step}</div>
                 <h3 className="text-lg font-bold text-slate-900 mb-3">{item.title}</h3>
@@ -230,8 +224,8 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
-              <div key={i} className="group p-6 rounded-2xl bg-white border border-slate-100 hover:border-navy-200 hover:shadow-md transition-all">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-all text-copper-600 group-hover:text-white" style={{ background: 'linear-gradient(135deg, #F5E4CE, #EDD4B8)' }} onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, #C07840, #D2914C)'} onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, #F5E4CE, #EDD4B8)'}>
+              <div key={i} className="group p-6 rounded-2xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-soft transition-all">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-all text-copper-600 bg-copper-50 group-hover:bg-copper-500 group-hover:text-white">
                   {f.icon}
                 </div>
                 <h3 className="font-bold text-slate-900 mb-2">{f.title}</h3>
@@ -243,9 +237,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── NOT FOR EVERYONE ────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #0A1024 0%, #1C2B5C 100%)' }}>
+      <section className="py-24 relative overflow-hidden bg-navy-900">
         <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '36px 36px' }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-48 bg-copper-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center relative">
           <div className="inline-flex items-center gap-2 bg-copper-500/20 border border-copper-400/30 rounded-full px-4 py-1.5 text-copper-300 text-sm font-medium mb-8">
             <Mountain className="w-3.5 h-3.5" />
@@ -253,7 +246,7 @@ export default function LandingPage() {
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6 leading-tight">
             We Handpick Every Contractor.<br />
-            <span style={{ background: 'linear-gradient(135deg, #D2914C, #C07840)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span className="text-copper-500">
               That's the Point.
             </span>
           </h2>
@@ -267,7 +260,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── WAITLIST ─────────────────────────────────────── */}
-      <section id="waitlist" className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #C07840, #A0622C)' }}>
+      <section id="waitlist" className="py-24 relative overflow-hidden bg-copper-600">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
         <div className="max-w-lg mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-10">
@@ -326,7 +319,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────── */}
-      <footer className="py-10 border-t border-slate-100" style={{ background: '#0A1024' }}>
+      <footer className="py-10 border-t border-navy-800 bg-navy-900">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
             <PeakLogo size={30} />

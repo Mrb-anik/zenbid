@@ -59,13 +59,13 @@ function buildHTML(project: Project, items: ProjectItem[], totals: TotalsResult)
     margin: 0 auto;
   }
   /* ── Header ── */
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #1C2B5C; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #0F172A; }
   .brand { display: flex; align-items: center; gap: 10px; }
-  .brand-name { font-size: 20px; font-weight: 900; color: #1C2B5C; letter-spacing: -0.5px; }
+  .brand-name { font-size: 20px; font-weight: 900; color: #0F172A; letter-spacing: -0.5px; }
   .brand-name span { color: #C07840; }
   .brand-tagline { font-size: 9px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
   .proposal-meta { text-align: right; }
-  .proposal-meta h1 { font-size: 22px; font-weight: 900; color: #1C2B5C; }
+  .proposal-meta h1 { font-size: 22px; font-weight: 900; color: #0F172A; }
   .proposal-meta p { font-size: 11px; color: #666; margin-top: 2px; }
   /* ── Info grid ── */
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
@@ -75,7 +75,7 @@ function buildHTML(project: Project, items: ProjectItem[], totals: TotalsResult)
   .info-box strong { color: #111827; }
   /* ── Items table ── */
   table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  thead tr { background: #1C2B5C; color: white; }
+  thead tr { background: #0F172A; color: white; }
   thead th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
   thead th.num { text-align: right; }
   tbody tr { border-bottom: 1px solid #f1f5f9; }
@@ -89,14 +89,14 @@ function buildHTML(project: Project, items: ProjectItem[], totals: TotalsResult)
   .totals-row { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 12px; color: #374151; }
   .totals-row:not(:last-child) { border-bottom: 1px solid #e2e8f0; }
   .totals-row.subtotal { font-weight: 600; }
-  .totals-total { display: flex; justify-content: space-between; padding: 12px 16px; background: #1C2B5C; color: white; font-size: 15px; font-weight: 900; }
+  .totals-total { display: flex; justify-content: space-between; padding: 12px 16px; background: #0F172A; color: white; font-size: 15px; font-weight: 900; }
   /* ── Notes ── */
   .notes { background: #fffbf5; border: 1px solid #f0e4d0; border-radius: 10px; padding: 14px 16px; margin-bottom: 28px; }
   .notes h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #C07840; margin-bottom: 6px; }
   .notes p { font-size: 12px; color: #374151; line-height: 1.7; white-space: pre-wrap; }
   /* ── Signature ── */
   .sig-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-  .sig-box { border-top: 2px solid #1C2B5C; padding-top: 8px; }
+  .sig-box { border-top: 2px solid #0F172A; padding-top: 8px; }
   .sig-box p { font-size: 10px; color: #9ca3af; margin-top: 28px; }
   /* ── Footer ── */
   .footer { border-top: 1px solid #e2e8f0; padding-top: 14px; display: flex; justify-content: space-between; align-items: center; }
@@ -115,7 +115,7 @@ function buildHTML(project: Project, items: ProjectItem[], totals: TotalsResult)
 <div class="header">
   <div class="brand">
     <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-      <rect width="64" height="64" rx="12" fill="#1C2B5C"/>
+      <rect width="64" height="64" rx="12" fill="#0F172A"/>
       <polygon points="32,8 6,56 58,56" fill="none" stroke="#C07840" stroke-width="2.5" stroke-linejoin="round"/>
       <polyline points="18,50 26,28 32,40 38,28 46,50" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       <line x1="36" y1="16" x2="52" y2="30" stroke="#C07840" stroke-width="2.5" stroke-linecap="round"/>

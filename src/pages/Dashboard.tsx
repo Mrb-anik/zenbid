@@ -11,14 +11,14 @@ import type { StatusType } from '../types';
 
 const STATUS_COLORS: Record<StatusType, string> = {
   lead: '#94A3B8',
-  bidding: '#1C2B5C',
+  bidding: '#0F172A',
   sent: '#C07840',
   approved: '#10B981',
   won: '#059669',
   lost: '#F43F5E',
 };
 
-const TRADE_COLORS = ['#1C2B5C','#C07840','#10B981','#F59E0B','#F43F5E','#8B5CF6','#06B6D4','#64748B'];
+const TRADE_COLORS = ['#0F172A','#C58B5C','#10B981','#F59E0B','#F43F5E','#8B5CF6','#06B6D4','#64748B'];
 
 export default function Dashboard() {
   const navigate = useNavigate();

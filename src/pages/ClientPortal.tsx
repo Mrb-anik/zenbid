@@ -594,7 +594,7 @@ export default function ClientPortal() {
         )}
 
         {/* ── Footer ── */}
-        <div style={{ background: '#0A1024' }} className="rounded-2xl px-6 py-4 text-center">
+        <div className="bg-navy-900 rounded-2xl px-6 py-4 text-center">
           <div className="text-slate-400 text-xs">
             {project.company_name} · Powered by PeakEstimator · {new Date().getFullYear()}
           </div>

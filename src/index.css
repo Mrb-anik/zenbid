@@ -18,7 +18,7 @@
 
   body {
     background-color: #F8FAFC;
-    color: #0A1024;
+    color: #111827;
     min-height: 100vh;
   }
 
@@ -41,31 +41,25 @@
   }
 
   /* ── Typography helpers ─────────────────────── */
-  .text-gradient-copper {
-    background: linear-gradient(135deg, #D2914C, #C07840);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .text-copper {
+    color: #C58B5C;
   }
-  .text-gradient-navy {
-    background: linear-gradient(135deg, #2E449F, #1C2B5C);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .text-navy {
+    color: #0F172A;
   }
 
-  /* ── Glass effect ───────────────────────────── */
+  /* ── Glass effect (Subtle) ───────────────────────────── */
   .glass {
-    background: rgba(255,255,255,0.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
   .glass-dark {
-    background: rgba(10,16,36,0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.05);
   }
 }
 
@@ -95,12 +89,12 @@ input:focus, textarea:focus, select:focus { outline: none; }
 .table-row-hover:hover { background-color: #F8FAFC; }
 
 /* ── Status badge styles ─────────────────────── */
-.status-lead     { background: rgba(148,163,184,0.15); color: #64748B; border: 1px solid rgba(148,163,184,0.3); }
-.status-bidding  { background: rgba(28,43,92,0.12);    color: #1C2B5C; border: 1px solid rgba(28,43,92,0.2); }
-.status-sent     { background: rgba(192,120,64,0.12);   color: #C07840; border: 1px solid rgba(192,120,64,0.25); }
-.status-approved { background: rgba(16,185,129,0.12);   color: #059669; border: 1px solid rgba(16,185,129,0.25); }
-.status-won      { background: rgba(5,150,105,0.12);    color: #059669; border: 1px solid rgba(5,150,105,0.25); }
-.status-lost     { background: rgba(239,68,68,0.12);    color: #DC2626; border: 1px solid rgba(239,68,68,0.2); }
+.status-lead     { background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; }
+.status-bidding  { background: #F1F5F9; color: #0F172A; border: 1px solid #E2E8F0; }
+.status-sent     { background: #FFF7ED; color: #C58B5C; border: 1px solid #FFEDD5; }
+.status-approved { background: #ECFDF5; color: #10B981; border: 1px solid #D1FAE5; }
+.status-won      { background: #ECFDF5; color: #10B981; border: 1px solid #D1FAE5; }
+.status-lost     { background: #FEF2F2; color: #EF4444; border: 1px solid #FEE2E2; }
 
 /* ── Category badge styles ───────────────────── */
 .category-material  { background: #D1FAE5; color: #059669; }

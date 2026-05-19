@@ -28,7 +28,7 @@ function SmartRoot() {
 
   if (session === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A1024' }}>
+      <div className="min-h-screen flex items-center justify-center bg-navy-900">
         <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#C07840', borderTopColor: 'transparent' }} />
       </div>
     );
