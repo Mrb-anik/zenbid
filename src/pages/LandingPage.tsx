@@ -72,12 +72,12 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <PeakLogo size={34} />
-            <span className="font-bold text-lg text-slate-900 hidden sm:block">
+            <span className={`font-bold text-lg hidden sm:block transition-colors ${scrolled ? 'text-slate-900' : 'text-white'}`}>
               Peak<span className="text-copper-600">Estimator</span>
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/login" className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors px-3 py-2">
+            <Link to="/login" className={`text-sm font-medium transition-colors px-3 py-2 ${scrolled ? 'text-slate-500 hover:text-slate-900' : 'text-slate-300 hover:text-white'}`}>
               Member Sign In
             </Link>
             <a href="#waitlist" className="bg-copper-500 hover:bg-copper-600 text-white text-sm font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl transition-all shadow-copper hover:-translate-y-0.5 whitespace-nowrap">
