@@ -10,7 +10,7 @@ const navItems = [
   { path: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/projects',   label: 'Projects',   icon: Briefcase },
   { path: '/price-book', label: 'Price Book', icon: BookOpen },
-  { path: '/success',    label: 'Client Success', icon: Award },
+  { path: '/success',    label: 'Client Success', icon: Award, hideForAdmin: true },
   { path: '/support',    label: 'Support Desk', icon: HelpCircle },
   { path: '/settings',   label: 'Settings',   icon: Settings },
 ];
@@ -121,7 +121,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
-          {navItems.map(({ path, label, icon: Icon }) => (
+          {navItems.filter(item => !(item.hideForAdmin && profile?.is_admin)).map(({ path, label, icon: Icon }) => (
             <NavLink key={path} to={path} className={navLinkClass}>
               {({ isActive }) => (
                 <>
@@ -242,7 +242,7 @@ export default function Sidebar() {
             </div>
             {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-              {navItems.map(({ path, label, icon: Icon }) => (
+              {navItems.filter(item => !(item.hideForAdmin && profile?.is_admin)).map(({ path, label, icon: Icon }) => (
                 <NavLink key={path} to={path} className={navLinkClass} onClick={() => setMobileOpen(false)}>
                   {({ isActive }) => (
                     <>
@@ -286,7 +286,7 @@ export default function Sidebar() {
 
       {/* ── Mobile bottom nav ───────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-navy-900 border-t border-slate-100 dark:border-navy-850 shadow-lg flex items-center justify-around px-1 h-16 transition-colors">
-        {navItems.map(({ path, label, icon: Icon }) => (
+        {navItems.filter(item => !(item.hideForAdmin && profile?.is_admin)).map(({ path, label, icon: Icon }) => (
           <NavLink key={path} to={path} className={({ isActive }) =>
             `flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all flex-1 ${
               isActive ? 'text-copper' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
