@@ -50,12 +50,12 @@ function AnimatedCounter({ target, suffix = '', prefix = '' }: { target: number;
   return <span ref={ref}>{prefix}{count}{suffix}</span>;
 }
 
-/* ─── Live Proposal Simulator ────────────────────────────────── */
 function ProposalSimulator() {
   const [selectedTier, setSelectedTier] = useState<'good' | 'better' | 'best'>('better');
   const [upsell1, setUpsell1] = useState(false);
   const [upsell2, setUpsell2] = useState(false);
   const [showFinancing, setShowFinancing] = useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   interface SimulatorTier {
     label: string;
@@ -72,12 +72,54 @@ function ProposalSimulator() {
     best:   { label: 'Best',   price: 19800, color: 'from-violet-600 to-indigo-700', ring: 'ring-violet-400', desc: 'Elite materials + 10-yr + priority service' },
   };
 
+  // Auto-cycle options when idle to showcase interactivity
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+
+    const interval = setInterval(() => {
+      setSelectedTier(prev => {
+        if (prev === 'good') return 'better';
+        if (prev === 'better') return 'best';
+        return 'good';
+      });
+      // Toggle upsells randomly
+      setUpsell1(prev => !prev);
+      if (Math.random() > 0.5) {
+        setUpsell2(prev => !prev);
+      }
+      // Toggle financing view
+      setShowFinancing(prev => !prev);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying]);
+
+  const selectTierManual = (tier: 'good' | 'better' | 'best') => {
+    setIsAutoPlaying(false);
+    setSelectedTier(tier);
+  };
+
+  const toggleUpsell1Manual = () => {
+    setIsAutoPlaying(false);
+    setUpsell1(prev => !prev);
+  };
+
+  const toggleUpsell2Manual = () => {
+    setIsAutoPlaying(false);
+    setUpsell2(prev => !prev);
+  };
+
+  const toggleFinancingManual = () => {
+    setIsAutoPlaying(false);
+    setShowFinancing(prev => !prev);
+  };
+
   const base = tiers[selectedTier].price;
   const total = base + (upsell1 ? 1200 : 0) + (upsell2 ? 2400 : 0);
   const monthly = Math.round((total * (1 + (9.99 / 100 / 12) * 60) / 60));
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+    <div className="w-full max-w-lg mx-auto bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500">
       {/* Proposal header */}
       <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -89,8 +131,9 @@ function ProposalSimulator() {
             <div className="text-white/40 text-[10px]">Panel Upgrade Proposal · 3 options</div>
           </div>
         </div>
-        <div className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold">
-          ● Live Preview
+        <div className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          {isAutoPlaying ? 'Demo Mode' : 'Live Interactive'}
         </div>
       </div>
 
@@ -99,15 +142,15 @@ function ProposalSimulator() {
         {(Object.entries(tiers) as [keyof typeof tiers, SimulatorTier][]).map(([key, t]) => (
           <button
             key={key}
-            onClick={() => setSelectedTier(key)}
-            className={`relative rounded-2xl p-3 border-2 transition-all duration-200 text-left ${
+            onClick={() => selectTierManual(key)}
+            className={`relative rounded-2xl p-3 border-2 transition-all duration-300 text-left ${
               selectedTier === key
-                ? `bg-gradient-to-br ${t.color} border-transparent shadow-lg scale-[1.02]`
+                ? `bg-gradient-to-br ${t.color} border-transparent shadow-lg scale-[1.04]`
                 : 'bg-white/5 border-white/10 hover:border-white/20'
             }`}
           >
-            {'popular' in t && t.popular && selectedTier === key && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
+            {'popular' in t && t.popular && (
+              <div className={`absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap transition-opacity duration-300 ${selectedTier === key ? 'opacity-100' : 'opacity-40'}`}>
                 ⭐ Popular
               </div>
             )}
@@ -120,16 +163,16 @@ function ProposalSimulator() {
       </div>
 
       {/* Description */}
-      <div className="px-4 pb-3">
-        <p className="text-white/50 text-[11px] font-inter">{tiers[selectedTier].desc}</p>
+      <div className="px-4 pb-3 h-10 overflow-hidden">
+        <p className="text-white/50 text-[11px] font-inter transition-all duration-300">{tiers[selectedTier].desc}</p>
       </div>
 
       {/* Upsells */}
       <div className="px-4 pb-3 space-y-2">
         <div className="text-[10px] text-white/40 uppercase tracking-wider font-bold mb-1">Optional Add-ons</div>
         {[
-          { label: 'Surge Protection Package', price: 1200, state: upsell1, toggle: () => setUpsell1(p => !p) },
-          { label: 'Extended 10-Year Warranty', price: 2400, state: upsell2, toggle: () => setUpsell2(p => !p) },
+          { label: 'Surge Protection Package', price: 1200, state: upsell1, toggle: toggleUpsell1Manual },
+          { label: 'Extended 10-Year Warranty', price: 2400, state: upsell2, toggle: toggleUpsell2Manual },
         ].map(u => (
           <button
             key={u.label}
@@ -156,21 +199,27 @@ function ProposalSimulator() {
         <div className="flex items-center justify-between mb-3">
           <span className="text-white/60 text-xs">Total Investment</span>
           <button
-            onClick={() => setShowFinancing(p => !p)}
+            onClick={toggleFinancingManual}
             className="text-[10px] text-copper hover:text-copper/80 font-semibold transition-colors"
           >
             {showFinancing ? 'Show total' : '💳 Show monthly'}
           </button>
         </div>
         {showFinancing ? (
-          <div>
+          <div className="transition-all duration-300">
             <div className="text-2xl font-extrabold text-white font-sora">${monthly}/mo</div>
             <div className="text-white/40 text-[10px] mt-0.5">60 months @ 9.99% APR · Total ${total.toLocaleString()}</div>
           </div>
         ) : (
-          <div className="text-2xl font-extrabold text-white font-sora">${total.toLocaleString()}</div>
+          <div className="text-2xl font-extrabold text-white font-sora transition-all duration-300">${total.toLocaleString()}</div>
         )}
-        <button className="mt-3 w-full py-2.5 bg-copper hover:bg-amber-600 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5">
+        <button
+          onClick={() => {
+            setIsAutoPlaying(false);
+            toast.success("Demo proposal approved successfully!");
+          }}
+          className="mt-3 w-full py-2.5 bg-copper hover:bg-amber-600 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
+        >
           <Pen className="w-3.5 h-3.5" /> Approve & Sign Now
         </button>
       </div>
@@ -264,33 +313,36 @@ export default function LandingPage() {
                 <Zap className="w-3 h-3" /> Modern Proposal Platform for Contractors
               </div>
 
-              <h1 className="text-4xl sm:text-5xl xl:text-6xl font-sora font-extrabold leading-[1.08] tracking-tight mb-6">
-                Modern Proposals<br />
-                That Help Contractors<br />
+              <h1 className="text-4xl sm:text-5xl xl:text-6xl font-sora font-extrabold leading-[1.08] tracking-tight mb-6 animate-slide-up">
+                Win More Jobs With<br />
                 <span className="bg-gradient-to-r from-copper to-amber-400 bg-clip-text text-transparent">
-                  Win More Jobs.
+                  Modern Proposals.
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-white/60 leading-relaxed max-w-xl mb-10">
+              <p className="text-lg sm:text-xl text-amber-400/90 font-bold leading-relaxed max-w-xl mb-4 font-sora border-l-2 border-copper/50 pl-4 italic">
+                “Stop sending estimates that look like invoices.”
+              </p>
+
+              <p className="text-sm sm:text-base text-white/55 leading-relaxed max-w-xl mb-8">
                 Create beautiful estimates, present Good&nbsp;/&nbsp;Better&nbsp;/&nbsp;Best options, and deliver a homeowner experience that closes jobs faster — before you leave the driveway.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                <button
-                  id="hero-book-demo-btn"
-                  onClick={() => setShowDemoModal(true)}
-                  className="inline-flex items-center justify-center gap-2 bg-copper hover:bg-amber-600 text-white font-bold text-base px-7 py-4 rounded-xl transition-all shadow-xl shadow-copper/20 hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  Book Demo <ArrowRight className="w-5 h-5" />
-                </button>
+              <div className="flex flex-col sm:flex-row gap-3.5 mb-10">
                 <a
                   href="#simulator"
                   id="hero-view-proposal-btn"
-                  className="inline-flex items-center justify-center gap-2 bg-white/8 hover:bg-white/12 text-white font-bold text-base px-7 py-4 rounded-xl border border-white/10 transition-all"
+                  className="inline-flex items-center justify-center gap-2.5 bg-copper hover:bg-amber-600 text-white font-bold text-base px-8 py-4 rounded-xl transition-all shadow-xl shadow-copper/20 hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  <Play className="w-4 h-4 text-copper" /> View Interactive Proposal
+                  <Play className="w-4 h-4 text-white fill-white shrink-0" /> See Interactive Proposal
                 </a>
+                <button
+                  id="hero-book-demo-btn"
+                  onClick={() => setShowDemoModal(true)}
+                  className="inline-flex items-center justify-center gap-2 bg-white/8 hover:bg-white/12 text-white font-bold text-base px-8 py-4 rounded-xl border border-white/10 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  Book Demo <ArrowRight className="w-5 h-5 text-copper shrink-0" />
+                </button>
               </div>
 
               {/* Social proof */}
@@ -307,7 +359,7 @@ export default function LandingPage() {
             </div>
 
             {/* Hero Visual – Live Simulator */}
-            <div id="simulator" className="flex justify-center">
+            <div id="simulator" className="flex justify-center scroll-mt-24">
               <ProposalSimulator />
             </div>
           </div>
@@ -352,61 +404,33 @@ export default function LandingPage() {
             <p className="text-white/50 text-base max-w-xl mx-auto">The gap between winning and losing a job is often the first impression — your proposal.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Old way */}
-            <div className="rounded-3xl border border-red-900/30 bg-red-950/10 p-8">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-red-900/40 flex items-center justify-center">
-                  <X className="w-4 h-4 text-red-400" />
-                </div>
-                <span className="text-sm font-bold text-red-400 uppercase tracking-wider">Traditional Software</span>
-              </div>
-              <ul className="space-y-3.5">
-                {[
-                  'Generic PDFs that look like 2005',
-                  'One price, take it or leave it',
-                  'Slow to build, slow to send',
-                  'Complex setup and training',
-                  'Operations-heavy, sales-weak',
-                  'No homeowner engagement metrics',
-                  'Clients wait 2-3 days for a quote',
-                ].map(item => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-white/50">
-                    <X className="w-4 h-4 text-red-500/60 shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* Table-based side-by-side comparison */}
+          <div className="max-w-4xl mx-auto bg-white/[0.02] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+            {/* Table Header */}
+            <div className="grid grid-cols-2 bg-white/5 border-b border-white/10 py-5 px-6 sm:px-8 text-sm font-bold uppercase tracking-wider font-sora">
+              <div className="text-white/40">The Outdated PDF Way</div>
+              <div className="text-copper flex items-center gap-1.5">⚡ The PeakEstimator Way</div>
             </div>
-
-            {/* PeakEstimator */}
-            <div className="rounded-3xl border border-copper/20 bg-gradient-to-br from-copper/8 to-amber-500/5 p-8 relative overflow-hidden">
-              <div className="absolute top-3 right-3 bg-copper text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                PeakEstimator
-              </div>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-copper/20 flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-copper" />
+            
+            {/* Table Rows */}
+            {[
+              { old: 'Static PDF attachments that look like invoices', new: 'Beautiful, responsive web proposals built for mobile screens' },
+              { old: 'One flat take-it-or-leave-it price number', new: 'Good / Better / Best structured choices' },
+              { old: 'Hard, aggressive upsells that feel pushy', new: 'Self-guided client upgrades and accessory toggles' },
+              { old: 'Slow approvals with print-sign-scan steps', new: 'Instant digital signature approvals completed in seconds' },
+              { old: 'Generic, unbranded, forgettable layouts', new: 'Premium, interactive modern homeowner experience' },
+            ].map((row, i) => (
+              <div key={i} className={`grid grid-cols-2 py-5 px-6 sm:px-8 text-sm gap-6 border-b border-white/5 hover:bg-white/[0.01] transition-colors ${i % 2 === 1 ? 'bg-white/[0.005]' : ''}`}>
+                <div className="text-white/50 flex items-start gap-2.5">
+                  <X className="w-4 h-4 text-red-500/60 shrink-0 mt-0.5" />
+                  <span>{row.old}</span>
                 </div>
-                <span className="text-sm font-bold text-copper uppercase tracking-wider">Modern Approach</span>
+                <div className="text-white font-medium flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-copper shrink-0 mt-0.5" />
+                  <span>{row.new}</span>
+                </div>
               </div>
-              <ul className="space-y-3.5">
-                {[
-                  'Interactive web proposals on any device',
-                  'Good / Better / Best option tiers',
-                  'Estimate done in under 5 minutes',
-                  'Up and running in an afternoon',
-                  'Built purely for winning more jobs',
-                  'Real-time homeowner engagement alerts',
-                  'Clients approve the same day',
-                ].map(item => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-white">
-                    <CheckCircle className="w-4 h-4 text-copper shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -508,6 +532,99 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── BUILT FOR CLOSING SECTION ────────────────────────── */}
+      <section className="py-24 sm:py-32 bg-[#0A0F1D] border-t border-white/5 relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-1/2 left-1/4 w-[500px] h-[300px] bg-copper/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+          
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-[11px] text-white/60 font-semibold uppercase tracking-widest mb-5">
+              <Zap className="w-3 h-3 text-copper animate-pulse" /> The Conversion Layer
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-sora font-extrabold text-white mb-5 leading-tight">
+              Built for Closing, <span className="text-copper">Not Just Estimating.</span>
+            </h2>
+            <p className="text-white/50 text-base max-w-2xl mx-auto font-inter">
+              We don't try to be your dispatcher, your fleet tracker, or your payroll processor. PeakEstimator is the hyper-focused proposal layer engineered for one thing: contractor revenue.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+            {/* Columns */}
+            <div className="space-y-8">
+              <div className="bg-white/[0.02] border border-white/8 p-6 sm:p-8 rounded-3xl hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+                  <X className="w-5 h-5 text-red-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white font-sora mb-2">Zero Dispatch Bloat</h3>
+                <p className="text-sm text-white/50 leading-relaxed font-inter">
+                  Traditional contractor systems are bloated with dispatch grids, map routing, and timecards. We skip the back-office complexity so your sales reps and technicians actually enjoy using the tool.
+                </p>
+              </div>
+
+              <div className="bg-white/[0.02] border border-white/8 p-6 sm:p-8 rounded-3xl hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 rounded-2xl bg-copper/10 border border-copper/20 flex items-center justify-center mb-4">
+                  <Zap className="w-5 h-5 text-copper" />
+                </div>
+                <h3 className="text-lg font-bold text-white font-sora mb-2">Speed as a Weapon</h3>
+                <p className="text-sm text-white/50 leading-relaxed font-inter">
+                  The contractor who sends the proposal first wins 60% of the time. Build elite multi-option proposals in under 5 minutes right from the driveway, and get approval before starting the truck.
+                </p>
+              </div>
+            </div>
+
+            {/* Visual ERP Layer Map */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 sm:p-8 relative">
+              <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-6 text-center font-sora">How PeakEstimator Sits on Top of Your Stack</h4>
+              
+              <div className="space-y-6 relative">
+                {/* Visual Connection line (vertical) */}
+                <div className="absolute left-[27px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-white/10 via-copper/40 to-white/10" />
+
+                {/* Step 1 */}
+                <div className="flex items-center gap-4 relative z-10 group">
+                  <div className="w-14 h-14 rounded-2xl bg-[#0F172A] border border-white/10 flex items-center justify-center shrink-0 shadow-lg group-hover:border-white/20 transition-colors">
+                    <Users className="w-6 h-6 text-white/40" />
+                  </div>
+                  <div>
+                    <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Step 1: Your Backend CRM</div>
+                    <div className="text-white font-semibold text-sm">ServiceTitan, Housecall Pro, or Spreadsheets</div>
+                    <div className="text-white/40 text-xs mt-0.5 font-inter">Scheduling, customer history & dispatching</div>
+                  </div>
+                </div>
+
+                {/* Step 2 (PeakEstimator Layer - Main focus) */}
+                <div className="flex items-center gap-4 relative z-10 group">
+                  <div className="w-14 h-14 rounded-2xl bg-copper/10 border-2 border-copper flex items-center justify-center shrink-0 shadow-xl shadow-copper/10 scale-105">
+                    <PeakLogo size={28} />
+                  </div>
+                  <div className="bg-copper/5 border border-copper/30 rounded-2xl p-4 flex-1">
+                    <div className="text-copper text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                      ⭐ The Conversion Layer
+                    </div>
+                    <div className="text-white font-bold text-sm mt-0.5">PeakEstimator Proposals</div>
+                    <div className="text-white/70 text-xs mt-1 font-inter">G/B/B Option Tiers · Live Financing · Digital Signatures</div>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-center gap-4 relative z-10 group">
+                  <div className="w-14 h-14 rounded-2xl bg-[#0F172A] border border-white/10 flex items-center justify-center shrink-0 shadow-lg group-hover:border-white/20 transition-colors">
+                    <BarChart3 className="w-6 h-6 text-white/40" />
+                  </div>
+                  <div>
+                    <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Step 3: Accounting & Invoicing</div>
+                    <div className="text-white font-semibold text-sm">QuickBooks, Stripe, or Sage</div>
+                    <div className="text-white/40 text-xs mt-0.5 font-inter">Automated sync for deposits and bookkeeping</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── WORKFLOW ──────────────────────────────────────────── */}
       <section className="py-24 sm:py-32 bg-[#080D1A]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -574,8 +691,8 @@ export default function LandingPage() {
               Give Homeowners Options Instead<br />
               <span className="text-copper">of One Expensive Number.</span>
             </h2>
-            <p className="text-white/50 text-base max-w-2xl mx-auto">
-              When you present a single quote, homeowners compare you to competitors. When you present three tiers, they compare your options to each other — and almost always pick the middle one.
+            <p className="text-white/50 text-base max-w-2xl mx-auto font-inter">
+              Help customers choose confidently instead of reacting to one overwhelming price. When you present a single quote, homeowners compare you to competitors. When you present three tiers as a structured sales process, they compare your options to each other — and almost always pick the middle one.
             </p>
           </div>
 
@@ -724,20 +841,22 @@ export default function LandingPage() {
                     : 'bg-white/3 border-white/8 hover:border-white/15 hover:bg-white/5'
                 }`}
               >
-                {/* Stars */}
-                <div className="flex gap-0.5 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-white/80 text-sm leading-relaxed mb-6 italic">"{quote}"</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-white font-bold text-sm">{name}</div>
-                    <div className="text-white/40 text-xs">{trade} · {location}</div>
+                {/* Top badge and stars */}
+                <div className="flex items-center justify-between mb-5 gap-2">
+                  <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    ))}
                   </div>
-                  <div className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-1.5 rounded-lg text-right">
+                  <div className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-1 rounded-lg text-right uppercase tracking-wider font-sora">
                     {result}
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm leading-relaxed mb-6 italic font-inter">"{quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="text-white font-bold text-sm font-sora">{name}</div>
+                    <div className="text-white/40 text-xs font-inter">{trade} · {location}</div>
                   </div>
                 </div>
               </div>
