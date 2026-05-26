@@ -8,15 +8,16 @@ import { eventBus } from '../lib/eventBus';
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const activeUserId = useAppStore(s => s.activeUserId());
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    const userId = useAppStore.getState().activeUserId();
+    if (!userId) { setLoading(false); return; }
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -27,16 +28,17 @@ export function useProjects() {
     setLoading(false);
   }, []);
 
+  // Re-fetch when the active user changes (impersonation toggle)
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+  }, [fetchProjects, activeUserId]);
 
   const createProject = async (input: Partial<Project>): Promise<Project | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    const userId = useAppStore.getState().activeUserId();
+    if (!userId) return null;
 
     // Snapshot contractor branding from profile at creation time
-    const profile = useAppStore.getState().profile;
+    const profile = useAppStore.getState().activeProfile();
     const brandSnapshot = profile ? {
       company_name:  input.company_name  || profile.company_name  || '',
       company_email: input.company_email || profile.company_email || '',
@@ -53,7 +55,7 @@ export function useProjects() {
       .insert({
         ...input,
         ...brandSnapshot,
-        user_id: user.id,
+        user_id: userId,
         status: 'lead',
       })
       .select()

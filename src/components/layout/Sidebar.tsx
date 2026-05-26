@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, BookOpen, Settings, LogOut, ShieldAlert, X, Menu, Sun, Moon, Award, HelpCircle, Bell, ClipboardList, FileText, Wrench } from 'lucide-react';
+import { LayoutDashboard, Briefcase, BookOpen, Settings, LogOut, ShieldAlert, X, Menu, Sun, Moon, Award, HelpCircle, Bell, ClipboardList, FileText, Wrench, UserCheck } from 'lucide-react';
 import { supabase } from '../../api/supabase';
 import { useAppStore } from '../../store/useAppStore';
 import { toast } from 'sonner';
@@ -32,6 +32,8 @@ function PeakLogo({ size = 32 }: { size?: number }) {
 export default function Sidebar() {
   const navigate = useNavigate();
   const profile = useAppStore(s => s.profile);
+  const impersonatedProfile = useAppStore(s => s.impersonatedProfile);
+  const stopImpersonation = useAppStore(s => s.stopImpersonation);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showNotifications, setShowNotifications] = useState(false);
@@ -82,9 +84,17 @@ export default function Sidebar() {
   };
 
   const handleLogout = async () => {
+    // Always exit impersonation on logout
+    if (impersonatedProfile) stopImpersonation();
     await supabase.auth.signOut();
     toast.success('Logged out');
     navigate('/');
+  };
+
+  const handleExitImpersonation = () => {
+    stopImpersonation();
+    toast.success('Returned to your admin account', { duration: 2500 });
+    navigate('/admin');
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -99,6 +109,27 @@ export default function Sidebar() {
 
   const sidebarContent = (
     <>
+      {/* ── Agency Masquerade Banner ─────────────────────────────── */}
+      {impersonatedProfile && (
+        <div className="mx-3 mt-3 mb-1 rounded-xl bg-amber-500/10 border border-amber-500/40 px-3 py-2.5 flex items-start gap-2">
+          <UserCheck className="text-amber-400 flex-shrink-0 mt-0.5" style={{ width: 15, height: 15 }} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Agency Mode</div>
+            <div className="text-[11px] font-semibold text-white truncate mt-0.5">
+              {impersonatedProfile.company_name || impersonatedProfile.full_name || impersonatedProfile.email}
+            </div>
+            <div className="text-[9px] text-slate-400 truncate">{impersonatedProfile.email}</div>
+          </div>
+          <button
+            onClick={handleExitImpersonation}
+            className="flex-shrink-0 text-amber-400 hover:text-white hover:bg-amber-500/20 rounded-lg p-1 transition-all"
+            title="Exit Agency Mode"
+          >
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
+
       {/* Logo */}
       <div className="px-5 py-5 border-b border-navy-700">
         <Link to="/dashboard" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
@@ -146,17 +177,25 @@ export default function Sidebar() {
       {/* Profile + Controls */}
       <div className="px-3 py-4 border-t border-navy-700 space-y-2 bg-navy-950/40">
         {profile && (
-          <div className="px-3 py-2.5 rounded-xl bg-navy-700/80 border border-navy-700/45">
+          <div className={`px-3 py-2.5 rounded-xl border ${
+            impersonatedProfile
+              ? 'bg-amber-500/10 border-amber-500/30'
+              : 'bg-navy-700/80 border-navy-700/45'
+          }`}>
             <div className="text-xs font-semibold text-white truncate">
-              {profile.company_name || profile.full_name || 'Your Company'}
+              {impersonatedProfile
+                ? (impersonatedProfile.company_name || impersonatedProfile.full_name || 'Client Account')
+                : (profile.company_name || profile.full_name || 'Your Company')}
             </div>
-            <div className="text-[10px] text-slate-400 truncate mt-0.5">{profile.email}</div>
-            {profile.billing_tier && (
+            <div className="text-[10px] text-slate-400 truncate mt-0.5">
+              {impersonatedProfile ? impersonatedProfile.email : profile.email}
+            </div>
+            {(impersonatedProfile?.billing_tier || profile.billing_tier) && (
               <span className={`inline-block mt-1 text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-wide ${
-                profile.billing_tier === 'enterprise' ? 'bg-copper/20 text-copper' :
-                profile.billing_tier === 'pro' ? 'bg-blue-500/20 text-blue-400' :
+                (impersonatedProfile?.billing_tier || profile.billing_tier) === 'enterprise' ? 'bg-copper/20 text-copper' :
+                (impersonatedProfile?.billing_tier || profile.billing_tier) === 'pro' ? 'bg-blue-500/20 text-blue-400' :
                 'bg-slate-700 text-slate-400'
-              }`}>{profile.billing_tier}</span>
+              }`}>{impersonatedProfile?.billing_tier || profile.billing_tier}</span>
             )}
           </div>
         )}

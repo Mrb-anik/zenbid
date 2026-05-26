@@ -5,14 +5,24 @@ import { supabase } from '../api/supabase';
 interface AppState {
   profile: Profile | null;
   loading: boolean;
+  // Agency masquerade — when set, the admin is "acting as" this user
+  impersonatedProfile: Profile | null;
   setProfile: (profile: Profile | null) => void;
   fetchProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  // Agency Owner actions
+  startImpersonation: (target: Profile) => void;
+  stopImpersonation: () => void;
+  /** The profile whose data is currently visible (impersonated if active, otherwise own) */
+  activeProfile: () => Profile | null;
+  /** The user_id to scope DB queries to */
+  activeUserId: () => string | null;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   loading: false,
+  impersonatedProfile: null,
 
   setProfile: (profile) => set({ profile }),
 
@@ -47,5 +57,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!error && data) {
       set({ profile: data as Profile });
     }
+  },
+
+  startImpersonation: (target: Profile) => {
+    set({ impersonatedProfile: target });
+  },
+
+  stopImpersonation: () => {
+    set({ impersonatedProfile: null });
+  },
+
+  activeProfile: () => {
+    const { impersonatedProfile, profile } = get();
+    return impersonatedProfile ?? profile;
+  },
+
+  activeUserId: () => {
+    const { impersonatedProfile, profile } = get();
+    return (impersonatedProfile ?? profile)?.id ?? null;
   },
 }));

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BroadcastPanel from '../components/admin/BroadcastPanel';
 import { supabase } from '../api/supabase';
 import { useEventBus } from '../hooks/useEventBus';
-import {Activity, AlertCircle, ArrowRight, Bell, Bot, Building2, Check, CheckCircle2, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, CreditCard, Database, DollarSign, Eye, FileText, Flag, Globe, Heart, HelpCircle, Laptop, LayoutTemplate, Mail, MessageSquare, Package, Pencil, Percent, Plus, RefreshCw, Save, ScrollText, Search, Send, Shield, ShieldAlert, Smartphone, Star, Timer, ToggleLeft, ToggleRight, Trash2, TrendingUp, UserCheck, UserPlus, Users, X, Zap} from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import {Activity, AlertCircle, ArrowRight, Bell, Bot, Building2, Check, CheckCircle2, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, CreditCard, Database, DollarSign, Eye, FileText, Flag, Globe, Heart, HelpCircle, Laptop, LayoutTemplate, LogIn, Mail, MessageSquare, Package, Pencil, Percent, Plus, RefreshCw, Save, ScrollText, Search, Send, Shield, ShieldAlert, Smartphone, Star, Timer, ToggleLeft, ToggleRight, Trash2, TrendingUp, UserCheck, UserPlus, Users, X, Zap} from 'lucide-react';
 import { toast } from 'sonner';
 import { campaignManager, DEFAULT_FOLLOW_UP_RULES, type FollowUpRule } from '../lib/followUpCampaigns';
 import type {
@@ -23,6 +25,8 @@ type AdminTab = 'members' | 'crm' | 'integrations' | 'support' | 'email_logs' | 
 
 export default function AdminPortal() {
   const { triggerEvent } = useEventBus();
+  const navigate = useNavigate();
+  const { startImpersonation } = useAppStore();
   
   // Tabs
   const [activeTab, setActiveTab] = useState<AdminTab>('members');
@@ -1115,6 +1119,16 @@ Please assign an administrator immediately to prevent collision and address.`,
     setSendingPasswordReset(null);
   };
 
+  // ── Agency Masquerade ──────────────────────────────────────────────────────
+  const handleLoginAs = async (member: Profile) => {
+    startImpersonation(member);
+    toast.success(
+      `Now viewing as ${member.full_name || member.email} — you are in Agency Mode`,
+      { duration: 4000 }
+    );
+    navigate('/dashboard');
+  };
+
   const fetchAllSubscriptions = async () => {
     setSubscriptionsLoading(true);
     try {
@@ -1574,6 +1588,14 @@ Please assign an administrator immediately to prevent collision and address.`,
                           <div className="flex items-center gap-1 justify-end">
                             {!m.is_admin && (
                               <>
+                                {/* Agency Masquerade — Login As */}
+                                <button
+                                  onClick={() => handleLoginAs(m)}
+                                  className="p-1.5 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-slate-400 hover:text-violet-500 rounded-lg transition-all"
+                                  title={`Login as ${m.full_name || m.email}`}
+                                >
+                                  <LogIn className="w-3.5 h-3.5" />
+                                </button>
                                 <button
                                   onClick={() => { setEditingMember(m); setMemberRoleUpdate(m.role || 'estimator'); setMemberPlanUpdate(m.billing_tier || 'pro'); }}
                                   className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-slate-400 hover:text-blue-500 rounded-lg transition-all"
