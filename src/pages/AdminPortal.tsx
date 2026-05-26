@@ -2,15 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import BroadcastPanel from '../components/admin/BroadcastPanel';
 import { supabase } from '../api/supabase';
 import { useEventBus } from '../hooks/useEventBus';
-import {
-  ShieldAlert, UserCheck, Trash2, Mail, Plus, Users, Search,
-  Building2, Zap, Heart, AlertCircle, Clock, Check, FileText,
-  Star, MessageSquare, Send, Eye, RefreshCw, Shield, HelpCircle,
-  Laptop, Smartphone, ArrowRight, UserPlus, Flag, Bot, Bell,
-  LayoutTemplate, ScrollText, CreditCard, ToggleLeft, ToggleRight,
-  Pencil, Save, X, ChevronRight, Activity, Database, TrendingUp,
-  DollarSign, Percent, Timer, Package, CircleCheck, CircleX, Globe
-} from 'lucide-react';
+import {Activity, AlertCircle, ArrowRight, Bell, Bot, Building2, Check, CheckCircle2, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, CreditCard, Database, DollarSign, Eye, FileText, Flag, Globe, Heart, HelpCircle, Laptop, LayoutTemplate, Mail, MessageSquare, Package, Pencil, Percent, Plus, RefreshCw, Save, ScrollText, Search, Send, Shield, ShieldAlert, Smartphone, Star, Timer, ToggleLeft, ToggleRight, Trash2, TrendingUp, UserCheck, UserPlus, Users, X, Zap} from 'lucide-react';
 import { toast } from 'sonner';
 import { campaignManager, DEFAULT_FOLLOW_UP_RULES, type FollowUpRule } from '../lib/followUpCampaigns';
 import type {
@@ -27,7 +19,7 @@ interface WaitlistItem {
   created_at: string;
 }
 
-type AdminTab = 'members' | 'crm' | 'integrations' | 'support' | 'email_logs' | 'waitlist' | 'feature_flags' | 'ai_settings' | 'automation' | 'templates' | 'audit_logs' | 'revenue' | 'broadcast' | 'churn' | 'billing' | 'stripe' | 'pricebook_admin';
+type AdminTab = 'members' | 'crm' | 'integrations' | 'support' | 'email_logs' | 'waitlist' | 'onboarding' | 'feature_flags' | 'ai_settings' | 'automation' | 'templates' | 'audit_logs' | 'revenue' | 'broadcast' | 'churn' | 'billing' | 'stripe' | 'pricebook_admin';
 
 export default function AdminPortal() {
   const { triggerEvent } = useEventBus();
@@ -38,6 +30,10 @@ export default function AdminPortal() {
   // Data lists
   const [members, setMembers] = useState<Profile[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistItem[]>([]);
+  const [onboardingData, setOnboardingData] = useState<any[]>([]);
+  const [onboardingDetail, setOnboardingDetail] = useState<any[] | null>(null);
+  const [onboardingDetailUser, setOnboardingDetailUser] = useState<any>(null);
+  const [onboardingDetailLoading, setOnboardingDetailLoading] = useState(false);
   const [integrationRequests, setIntegrationRequests] = useState<IntegrationRequest[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
@@ -183,6 +179,13 @@ export default function AdminPortal() {
       // 1. Fetch Waitlist
       const { data: waitData } = await supabase.from('waitlist').select('*').order('created_at', { ascending: false });
       if (waitData) setWaitlist(waitData);
+
+      // 1b. Fetch Onboarding summary
+      const { data: onbData } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, company_name, trade, plan_tier, onboarding_completed, concierge_requested, concierge_details, created_at')
+        .order('created_at', { ascending: false });
+      if (onbData) setOnboardingData(onbData);
 
       // 2. Fetch Members (Profiles)
       const { data: memData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
@@ -1334,6 +1337,7 @@ Please assign an administrator immediately to prevent collision and address.`,
             { id: 'support', label: 'Support Desk', icon: HelpCircle },
             { id: 'email_logs', label: 'Email Delivery', icon: Mail },
             { id: 'waitlist', label: 'Waitlist Queue', icon: UserCheck },
+            { id: 'onboarding', label: 'Onboarding Tracker', icon: ClipboardList },
             { id: 'broadcast', label: 'Broadcast', icon: Send },
           ].map(tab => {
             const Icon = tab.icon;
@@ -2200,6 +2204,155 @@ Please assign an administrator immediately to prevent collision and address.`,
               </tbody>
             </table>
           </div>
+        </div>
+
+      ) : activeTab === 'onboarding' ? (
+        /* ═══════════════════════════════════════════════════
+           TAB: ONBOARDING TRACKER
+        ═══════════════════════════════════════════════════ */
+        <div className="space-y-4">
+          {onboardingDetailUser ? (
+            /* ── Detail view: single user's responses ── */
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setOnboardingDetailUser(null); setOnboardingDetail(null); }}
+                  className="text-xs text-copper hover:underline flex items-center gap-1"
+                >
+                  ← Back to all users
+                </button>
+                <span className="text-slate-400 text-xs">|</span>
+                <span className="text-xs font-bold text-white dark:text-white text-slate-900">{onboardingDetailUser.full_name || onboardingDetailUser.email}</span>
+                {onboardingDetailUser.company_name && <span className="text-xs text-slate-400">— {onboardingDetailUser.company_name}</span>}
+              </div>
+
+              {onboardingDetailLoading ? (
+                <div className="text-center py-16 text-slate-400 text-xs">Loading responses…</div>
+              ) : onboardingDetail && onboardingDetail.length > 0 ? (
+                <div className="space-y-3">
+                  {onboardingDetail.map((r: any) => (
+                    <div key={r.id} className="bg-white dark:bg-navy border border-app-border dark:border-navy-800 rounded-2xl p-4 flex items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{r.item_label}</span>
+                          <span className="text-[9px] font-bold bg-slate-100 dark:bg-navy-950 text-slate-500 px-2 py-0.5 rounded uppercase">{r.section_id}</span>
+                          {r.is_completed
+                            ? <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">✓ Submitted</span>
+                            : <span className="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">In Progress</span>
+                          }
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 break-words leading-relaxed">{r.response_text || <span className="italic text-slate-400">No response yet</span>}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">Last updated: {new Date(r.updated_at).toLocaleString()}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <select
+                          value={r.admin_status || 'pending'}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            await supabase.from('onboarding_responses').update({ admin_status: newStatus, updated_at: new Date().toISOString() }).eq('id', r.id);
+                            setOnboardingDetail(prev => prev ? prev.map(x => x.id === r.id ? { ...x, admin_status: newStatus } : x) : prev);
+                            toast.success('Status updated');
+                          }}
+                          className="text-[10px] font-bold px-2 py-1 rounded-lg border bg-white dark:bg-navy-950 border-app-border dark:border-navy-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-copper"
+                        >
+                          <option value="pending">Pending Review</option>
+                          <option value="approved">Approved</option>
+                          <option value="needs_info">Needs Info</option>
+                          <option value="skipped">Skipped</option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-slate-400 text-xs">No responses submitted yet by this user.</div>
+              )}
+            </div>
+          ) : (
+            /* ── Summary table: all users ── */
+            <div className="bg-white dark:bg-navy border border-app-border dark:border-navy-800 shadow-card rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left border-collapse min-w-[900px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-navy-950 border-b border-app-border dark:border-navy-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="py-4 px-6">User / Company</th>
+                      <th className="py-4 px-6">Trade</th>
+                      <th className="py-4 px-6">Plan</th>
+                      <th className="py-4 px-6">Onboarding</th>
+                      <th className="py-4 px-6">Concierge</th>
+                      <th className="py-4 px-6">Signed Up</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-app-border dark:divide-navy-800 text-xs text-slate-900 dark:text-white">
+                    {onboardingData.length === 0 ? (
+                      <tr><td colSpan={7} className="py-16 text-center text-slate-400">No users found.</td></tr>
+                    ) : onboardingData.map((u: any) => (
+                      <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-navy-950/40">
+                        <td className="py-4 px-6">
+                          <div className="font-bold">{u.full_name || '—'}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">{u.email}</div>
+                          {u.company_name && <div className="text-[10px] text-copper mt-0.5">{u.company_name}</div>}
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="bg-copper/10 text-copper border border-copper/20 px-2 py-0.5 rounded text-[9px] font-bold uppercase capitalize">
+                            {u.trade || 'General'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-navy-950 px-2 py-0.5 rounded uppercase">
+                            {u.plan_tier || 'free'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          {u.onboarding_completed
+                            ? <span className="text-emerald-500 font-bold text-[10px] flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Complete</span>
+                            : <span className="text-amber-500 font-bold text-[10px] flex items-center gap-1"><Clock className="w-3 h-3" /> In Progress</span>
+                          }
+                        </td>
+                        <td className="py-4 px-6">
+                          {u.concierge_requested
+                            ? (
+                              <div>
+                                <span className="text-violet-500 font-bold text-[10px] flex items-center gap-1"><Star className="w-3 h-3" /> Requested</span>
+                                {u.concierge_details?.submitted_at && (
+                                  <div className="text-[9px] text-slate-400 mt-0.5">{new Date(u.concierge_details.submitted_at).toLocaleDateString()}</div>
+                                )}
+                                {u.concierge_details?.plan && (
+                                  <div className="text-[9px] text-copper capitalize mt-0.5">{u.concierge_details.plan} plan</div>
+                                )}
+                              </div>
+                            )
+                            : <span className="text-slate-400 text-[10px]">—</span>
+                          }
+                        </td>
+                        <td className="py-4 px-6 text-slate-400 font-semibold">{new Date(u.created_at).toLocaleDateString()}</td>
+                        <td className="py-4 px-6 text-right">
+                          <button
+                            onClick={async () => {
+                              setOnboardingDetailUser(u);
+                              setOnboardingDetailLoading(true);
+                              setOnboardingDetail(null);
+                              const { data } = await supabase
+                                .from('onboarding_responses')
+                                .select('*')
+                                .eq('user_id', u.id)
+                                .order('created_at', { ascending: true });
+                              setOnboardingDetail(data || []);
+                              setOnboardingDetailLoading(false);
+                            }}
+                            className="bg-copper/10 border border-copper/20 text-copper font-bold text-[10px] px-3.5 py-1.5 rounded-xl hover:bg-copper hover:text-white transition-all"
+                          >
+                            View Responses
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
       ) : activeTab === 'feature_flags' ? (
