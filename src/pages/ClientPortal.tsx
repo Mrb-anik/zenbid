@@ -171,11 +171,10 @@ export default function ClientPortal() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: proj, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('share_token', shareToken)
-        .single();
+      const { data: projArray, error } = await (supabase as any)
+        .rpc('get_project_by_share_token', { token: shareToken });
+
+      const proj = projArray && projArray.length > 0 ? projArray[0] : null;
 
       if (error || !proj) {
         setNotFound(true);
@@ -185,11 +184,8 @@ export default function ClientPortal() {
 
       setProject(proj as Project);
 
-      const { data: projectItems } = await supabase
-        .from('project_items')
-        .select('*')
-        .eq('project_id', proj.id)
-        .order('sort_order');
+      const { data: projectItems } = await (supabase as any)
+        .rpc('get_project_items_by_share_token', { token: shareToken });
 
       setItems((projectItems as ProjectItem[]) || []);
       setLoading(false);
@@ -212,7 +208,7 @@ export default function ClientPortal() {
       }
 
       // Load deposit requests
-      const { data: depositData } = await supabase.from('deposit_requests').select('*').eq('project_id', proj.id).eq('status', 'pending');
+      const { data: depositData } = await (supabase as any).rpc('get_deposits_by_share_token', { token: shareToken });
       setDeposits(depositData || []);
 
       // Track analytics
@@ -265,18 +261,15 @@ export default function ClientPortal() {
     setSignatureError(false);
     setSubmitting(true);
 
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        status: 'approved',
-        client_approved_at: new Date().toISOString(),
-        client_message: message || null,
-        signature_data: signatureDataUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('share_token', shareToken);
+    const { data: approveSuccess, error } = await (supabase as any)
+      .rpc('approve_project_by_share_token', {
+        token: shareToken,
+        signature: signatureDataUrl,
+        message: message || '',
+        selected_tier: project.selected_option_tier || null,
+      });
 
-    if (error) {
+    if (error || !approveSuccess) {
       console.error('Approval error:', error);
       toast.error('Failed to submit. Please try again.');
     } else {
@@ -305,15 +298,13 @@ export default function ClientPortal() {
     }
     setSubmitting(true);
 
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        client_message: message,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('share_token', shareToken);
+    const { data: changeSuccess, error } = await (supabase as any)
+      .rpc('request_project_changes_by_share_token', {
+        token: shareToken,
+        message: message,
+      });
 
-    if (error) {
+    if (error || !changeSuccess) {
       console.error('Changes request error:', error);
       toast.error('Failed to submit. Please try again.');
     } else {
@@ -430,13 +421,11 @@ export default function ClientPortal() {
     
     setProject(prev => prev ? { ...prev, selected_option_tier: tier } : null);
 
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        selected_option_tier: tier,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('share_token', shareToken);
+    const { data: tierSuccess, error } = await (supabase as any)
+      .rpc('select_project_tier_by_share_token', {
+        token: shareToken,
+        tier: tier,
+      });
 
     if (error) {
       console.error('Error selecting tier:', error);

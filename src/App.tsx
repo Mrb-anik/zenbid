@@ -20,6 +20,8 @@ import ClientSuccess from './pages/ClientSuccess';
 import SupportDesk from './pages/SupportDesk';
 import EnterpriseOnboarding from './pages/EnterpriseOnboarding';
 import MaintenanceContracts from './pages/MaintenanceContracts';
+import ContractPortal from './pages/ContractPortal';
+import SubcontractorPortal from './pages/SubcontractorPortal';
 
 function SmartRoot() {
   const [session, setSession] = useState<boolean | null>(null);
@@ -136,6 +138,8 @@ function App() {
         <Route path="/onboarding"  element={<EnterpriseOnboarding />} />
         {/* NEW ROUTES */}
         <Route path="/contracts"   element={<ProtectedRoute><AppLayout><MaintenanceContracts /></AppLayout></ProtectedRoute>} />
+        <Route path="/contract/:shareToken" element={<ContractPortal />} />
+        <Route path="/sub-bid/:token" element={<SubcontractorPortal />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -243,6 +243,53 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Load Cal.com embed script dynamically
+  useEffect(() => {
+    (function (C: any, A: string) {
+      let p = function (a: any, ar: any) { a.q.push(ar); };
+      let c = C.document; C.Cal = C.Cal || function () {
+        let a = arguments;
+        if (!a.length) return;
+        let s = c.createElement("script");
+        s.src = "https://embed.cal.com/embed/embed.js";
+        c.head.appendChild(s);
+        C.Cal = function () { let a = arguments; p(C.Cal, a); };
+        p(C.Cal, a);
+      };
+    })(window as any, "cal");
+  }, []);
+
+  // Initialize Cal.com inline booking after waitlist signup
+  useEffect(() => {
+    if (joined) {
+      const timer = setTimeout(() => {
+        const cal = (window as any).Cal;
+        if (cal) {
+          cal("inline", {
+            elementOrSelector: "#cal-booking-embed",
+            calLink: import.meta.env.VITE_CAL_BOOKING_LINK || "peakestimator/30min",
+            config: {
+              name: name,
+              email: email,
+              notes: `Trade selected: ${trade || 'Not specified'}`
+            },
+            styles: {
+              branding: {
+                brandColor: "#C58B5C" // Match copper theme
+              }
+            }
+          });
+          cal("ui", {
+            styles: { branding: { brandColor: "#C58B5C" } },
+            hideEventTypeDetails: false,
+            layout: "month_view"
+          });
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [joined, name, email, trade]);
+
   const handleWaitlist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -1109,11 +1156,15 @@ export default function LandingPage() {
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
           onClick={e => { if (e.target === e.currentTarget) setShowDemoModal(false); }}
         >
-          <div className="bg-[#0D1526] border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-scale-in">
+          <div className={`bg-[#0D1526] border border-white/10 rounded-3xl w-full shadow-2xl overflow-hidden transition-all duration-300 ${joined ? 'max-w-2xl' : 'max-w-md'} animate-scale-in`}>
             <div className="px-7 py-5 border-b border-white/8 flex items-center justify-between">
               <div>
-                <div className="text-white font-bold font-sora text-lg">Book Your Demo</div>
-                <div className="text-white/40 text-xs mt-0.5">We'll reach out personally within 24 hours</div>
+                <div className="text-white font-bold font-sora text-lg">
+                  {joined ? 'Schedule Your Walkthrough' : 'Book Your Demo'}
+                </div>
+                <div className="text-white/40 text-xs mt-0.5">
+                  {joined ? 'Select a time for a live video walkthrough' : "We'll reach out personally within 24 hours"}
+                </div>
               </div>
               <button
                 onClick={() => setShowDemoModal(false)}
@@ -1123,12 +1174,20 @@ export default function LandingPage() {
               </button>
             </div>
 
-            <div className="p-7">
+            <div className="p-7 max-h-[85vh] overflow-y-auto scrollbar-thin">
               {joined ? (
-                <div className="text-center py-8">
-                  <div className="text-5xl mb-4">🎉</div>
-                  <h3 className="text-xl font-sora font-extrabold text-white mb-3">You're in!</h3>
-                  <p className="text-white/50 text-sm leading-relaxed">We'll reach out personally within 24 hours to schedule your walkthrough. Keep building great work!</p>
+                <div className="text-center space-y-4">
+                  <div className="text-4xl">🎉</div>
+                  <h3 className="text-lg font-sora font-extrabold text-white">Choose a Time below</h3>
+                  <p className="text-white/50 text-xs leading-relaxed max-w-sm mx-auto">
+                    We've saved your details! Select a convenient slot below to schedule your live demo instantly.
+                  </p>
+                  
+                  {/* Cal.com Inline Embed */}
+                  <div 
+                    id="cal-booking-embed" 
+                    className="w-full min-h-[480px] rounded-2xl overflow-hidden bg-white/[0.01] border border-white/8 mt-4"
+                  />
                 </div>
               ) : (
                 <form onSubmit={handleWaitlist} className="space-y-4">
