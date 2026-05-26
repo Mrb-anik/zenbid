@@ -65,6 +65,7 @@ export default function AdminPortal() {
   const [inviteName, setInviteName] = useState('');
   const [inviteCompany, setInviteCompany] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
 
   // Email Sandbox States
   const [selectedEmailType, setSelectedEmailType] = useState<string>('welcome');
@@ -600,11 +601,11 @@ export default function AdminPortal() {
         sendNotification: true
       });
 
-      toast.success(`Invitation sent to ${inviteEmail}!`);
-      setShowInviteModal(false);
-      setInviteEmail('');
-      setInviteName('');
-      setInviteCompany('');
+      // Build the invite link from the returned user's action_link if present
+      const inviteLink = data?.action_link || 
+        `${import.meta.env.VITE_SUPABASE_URL?.replace('supabase.co', 'supabase.co')}/auth/v1/verify?token=...`;
+      setGeneratedInviteLink(data?.action_link || null);
+      toast.success(`Invitation email sent to ${inviteEmail}!`);
       fetchData();
     } catch (err) {
       toast.error((err as Error).message);
@@ -1177,7 +1178,121 @@ Please assign an administrator immediately to prevent collision and address.`,
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto font-inter select-none animate-fade-in relative min-h-screen pb-16">
-      
+
+      {/* ── Invite Modal ─────────────────────────────────────────── */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-navy rounded-2xl shadow-2xl border border-app-border dark:border-navy-700 w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-sora font-extrabold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-copper" />
+                  Send Direct Invitation
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">An email with a secure sign-in link will be sent immediately.</p>
+              </div>
+              <button
+                onClick={() => { setShowInviteModal(false); setGeneratedInviteLink(null); setInviteEmail(''); setInviteName(''); setInviteCompany(''); }}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Success state — show copyable link */}
+            {generatedInviteLink ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 rounded-xl">
+                  <CircleCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Invitation email sent to {inviteEmail}</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Direct Invite Link (copy to share manually)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={generatedInviteLink}
+                      className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-[10px] text-slate-600 dark:text-slate-300 font-mono focus:outline-none"
+                    />
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(generatedInviteLink); toast.success('Link copied!'); }}
+                      className="flex-shrink-0 px-3 py-2 rounded-xl bg-copper text-white text-xs font-bold hover:opacity-90 transition-all"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowInviteModal(false); setGeneratedInviteLink(null); setInviteEmail(''); setInviteName(''); setInviteCompany(''); }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-navy-800 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700 transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleInvite} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                    Email Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="contractor@example.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-copper/30 focus:border-copper transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Full Name</label>
+                  <input
+                    type="text"
+                    value={inviteName}
+                    onChange={e => setInviteName(e.target.value)}
+                    placeholder="John Smith"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-copper/30 focus:border-copper transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Company Name</label>
+                  <input
+                    type="text"
+                    value={inviteCompany}
+                    onChange={e => setInviteCompany(e.target.value)}
+                    placeholder="Smith Contracting LLC"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-copper/30 focus:border-copper transition-all"
+                  />
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl text-[11px] text-blue-600 dark:text-blue-400">
+                  <strong>What happens:</strong> Supabase sends a magic-link email. The recipient clicks it, sets a password, and lands on the dashboard. A copyable invite link will appear here for you to share manually if needed.
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={inviting || !inviteEmail.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-copper text-white text-sm font-bold hover:opacity-90 active:opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {inviting ? (
+                      <><RefreshCw className="w-4 h-4 animate-spin" /> Sending…</>
+                    ) : (
+                      <><Send className="w-4 h-4" /> Send Invitation</>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowInviteModal(false); setInviteEmail(''); setInviteName(''); setInviteCompany(''); }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Superadmin Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
