@@ -302,7 +302,7 @@ export default function EstimatorWorkspace() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-lg">{TRADE_EMOJIS[project.trade]}</span>
+              <span className="text-lg">{TRADE_EMOJIS[project.trade as import('../types').TradeType]}</span>
               <h1 className="text-base font-bold text-slate-900 dark:text-white truncate font-sora">{project.name}</h1>
             </div>
             {project.client_name && (
@@ -315,7 +315,7 @@ export default function EstimatorWorkspace() {
             <div className="relative group">
               <button
                 id="status-dropdown"
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${STATUS_LABEL_COLORS[project.status]}`}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${STATUS_LABEL_COLORS[project.status as import('../types').StatusType]}`}
               >
                 <span className="capitalize">{project.status}</span>
                 <ChevronDown className="w-3.5 h-3.5 opacity-60" />

@@ -23,7 +23,6 @@ import { supabase } from '../api/supabase';
 import { useAppStore } from '../store/useAppStore';
 import type { Project, StatusType } from '../types';
 import { toast } from 'sonner';
-import { eventBus } from '../lib/eventBus';
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -177,7 +176,6 @@ export function useProjects() {
 
   const updateProjectStatus = async (id: string, status: StatusType): Promise<void> => {
     await updateProject(id, { status });
-    eventBus.emit('project:status_changed', { id, status });
   };
 
   return {
@@ -190,3 +188,50 @@ export function useProjects() {
     updateProjectStatus,
   };
 }
+
+/**
+ * useProject — single project hook by ID.
+ * Used by EstimatorWorkspace and other single-project views.
+ */
+export function useProject(id: string | undefined) {
+  const [project, setProject] = useState<import('../types').Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProject = useCallback(async () => {
+    if (!id) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) { console.error('[useProject] fetch error:', error.message); setProject(null); }
+      else { setProject(data as import('../types').Project); }
+    } catch (err) {
+      console.error('[useProject] unexpected error:', err);
+      setProject(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { fetchProject(); }, [fetchProject]);
+
+  const updateProject = async (updates: Partial<import('../types').Project>): Promise<void> => {
+    if (!id) return;
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) { console.error('[useProject] update error:', error.message); return; }
+      setProject(prev => prev ? { ...prev, ...updates } : prev);
+    } catch (err) {
+      console.error('[useProject] update unexpected error:', err);
+    }
+  };
+
+  return { project, loading, fetchProject, updateProject };
+}
+

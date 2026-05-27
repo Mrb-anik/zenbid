@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, Building2, Phone, Mail, Award, ArrowRight, ArrowLeft, Layers, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useEventBus } from '../../hooks/useEventBus';
+import { supabase } from '../../api/supabase';
 import { toast } from 'sonner';
 
 interface WelcomeModalProps {
