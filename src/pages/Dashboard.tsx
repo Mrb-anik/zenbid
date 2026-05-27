@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -30,7 +30,7 @@ const TRADE_COLORS = ['#C58B5C', '#1E293B', '#10B981', '#F59E0B', '#EF4444', '#8
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { projects, loading: projectsLoading } = useProjects();
+  const { projects, loading: projectsLoading, fetchProjects } = useProjects();
   const profile = useAppStore(s => s.profile);
   const updateProfile = useAppStore(s => s.updateProfile);
   const { triggerEvent } = useEventBus();
@@ -42,42 +42,29 @@ export default function Dashboard() {
   // Track profile-loaded state to prevent flashing before data arrives
   const [profileChecked, setProfileChecked] = useState(false);
 
-  // 1. Fetch Timeline Events — scoped to current user
-  useEffect(() => {
-    fetchEvents();
+  // Celebration state for the "magical part" (live bid approvals)
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [approvedProposal, setApprovedProposal] = useState<any | null>(null);
 
-    // Org-scoped realtime — prevents cross-tenant event leakage
-    const channelName = `activity_events:${profile?.organization_id ?? profile?.id ?? 'anon'}`;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'activity_events',
-        filter: profile?.organization_id
-          ? `organization_id=eq.${profile.organization_id}`
-          : `user_id=eq.${profile?.id}`,
-      }, () => {
-        fetchEvents();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      const orgId = profile?.organization_id;
+      let query = supabase
         .from('activity_events')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(8);
+
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setEvents(data as ActivityEvent[]);
@@ -87,7 +74,75 @@ export default function Dashboard() {
     } finally {
       setTimelineLoading(false);
     }
-  };
+  }, [profile]);
+
+  // 1. Fetch Timeline Events & Projects realtime
+  useEffect(() => {
+    if (!profile) return;
+
+    fetchEvents();
+
+    const orgId = profile.organization_id;
+    const userId = profile.id;
+
+    // Org-scoped realtime for live events timeline
+    const channelName = `activity_events:${orgId ?? userId}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'activity_events',
+        filter: orgId
+          ? `organization_id=eq.${orgId}`
+          : `user_id=eq.${userId}`,
+      }, () => {
+        fetchEvents();
+      })
+      .subscribe();
+
+    // Subscribe to projects for realtime dashboard updates and the "magical" approval screen flash
+    const projectsChannel = supabase
+      .channel(`realtime_projects:${orgId ?? userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'projects',
+        filter: orgId
+          ? `organization_id=eq.${orgId}`
+          : `user_id=eq.${userId}`,
+      }, (payload) => {
+        // Refetch projects list to update KPIs and Recent Bids table instantly
+        fetchProjects();
+
+        // Check for client approval event (magical part!)
+        if (payload.eventType === 'UPDATE') {
+          const oldRecord = payload.old as any;
+          const newRecord = payload.new as any;
+          
+          // Trigger when status becomes 'approved'
+          if (newRecord.status === 'approved' && (!oldRecord || oldRecord.status !== 'approved')) {
+            setApprovedProposal(newRecord);
+            setShowCelebration(true);
+            
+            // Play a cash register / chime sound
+            try {
+              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav'); // cash register / chime sound
+              audio.volume = 0.5;
+              audio.play();
+            } catch (err) {
+              console.warn('Audio play failed:', err);
+            }
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(projectsChannel);
+    };
+  }, [profile, fetchEvents, fetchProjects]);
 
   // 2. Welcome modal: show only if onboarding NOT completed AND NOT dismissed
   //    Check both Supabase profile AND localStorage to prevent any flash/repetition
@@ -666,6 +721,110 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* ─── LIVE PROPOSAL APPROVAL CELEBRATION MODAL ─── */}
+      {showCelebration && approvedProposal && (
+        <div className="fixed inset-0 bg-navy-950/80 backdrop-blur-md z-[101] flex items-center justify-center p-4 animate-fade-in">
+          {/* Confetti particles background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(30)].map((_, i) => {
+              const randomLeft = Math.random() * 100;
+              const randomDelay = Math.random() * 5;
+              const randomDuration = 3 + Math.random() * 4;
+              const colors = ['#C58B5C', '#10B981', '#F59E0B', '#3B82F6', '#EC4899'];
+              const randomColor = colors[Math.floor(Math.random() * colors.length)];
+              return (
+                <div
+                  key={i}
+                  className="absolute w-2.5 h-2.5 rounded-sm opacity-80 animate-bounce"
+                  style={{
+                    left: `${randomLeft}%`,
+                    top: `-10px`,
+                    backgroundColor: randomColor,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                    animation: `fall ${randomDuration}s linear ${randomDelay}s infinite`,
+                  }}
+                />
+              );
+            })}
+            <style>{`
+              @keyframes fall {
+                0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+                100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+              }
+            `}</style>
+          </div>
+
+          <div className="bg-white dark:bg-navy-900 border-2 border-emerald-500/30 dark:border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.25)] p-8 rounded-3xl max-w-lg w-full animate-scale-in text-center relative overflow-hidden">
+            {/* Green glowing background */}
+            <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="w-20 h-20 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-widest mb-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              Live Deal Closed!
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-sora text-slate-900 dark:text-white mb-2 leading-tight">
+              Proposal Signed &amp; Approved
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-sm mx-auto">
+              Your client <strong className="text-slate-800 dark:text-white">{approvedProposal.client_name}</strong> just accepted the quote for:
+            </p>
+
+            {/* Quote details card */}
+            <div className="bg-slate-50 dark:bg-navy-950 border border-slate-200/50 dark:border-navy-800 rounded-2xl p-5 mb-8 text-left space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200/40 dark:border-navy-850 pb-2.5">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Project Name</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[200px]">{approvedProposal.name}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-slate-200/40 dark:border-navy-850 pb-2.5">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Investment Value</span>
+                <span className="text-lg font-extrabold text-copper font-sora">
+                  {formatCurrency(approvedProposal.total_value || 0)}
+                </span>
+              </div>
+              {approvedProposal.selected_option_tier && (
+                <div className="flex items-center justify-between border-b border-slate-200/40 dark:border-navy-850 pb-2.5">
+                  <span className="text-xs text-slate-450 font-bold uppercase tracking-wider">Selected Package</span>
+                  <span className="text-xs font-black uppercase tracking-wider bg-copper-100/50 dark:bg-copper-950/40 text-copper border border-copper-200/20 px-2.5 py-0.5 rounded-md">
+                    ⭐ {approvedProposal.selected_option_tier}
+                  </span>
+                </div>
+              )}
+              {approvedProposal.signature_data && (
+                <div className="pt-1">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block mb-2">Signature Captured</span>
+                  <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-2.5 flex items-center justify-center" style={{ height: 64 }}>
+                    <img src={approvedProposal.signature_data} alt="Client Signature" className="max-h-full dark:invert transition-colors" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setShowCelebration(false);
+                  navigate(`/projects/${approvedProposal.id}`);
+                }}
+                className="flex-1 py-3 px-5 bg-copper hover:bg-copper-hover text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Open Workspace <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowCelebration(false)}
+                className="flex-1 py-3 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-navy-800 dark:hover:bg-navy-750 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm transition-all border border-slate-200 dark:border-navy-750"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

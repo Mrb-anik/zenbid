@@ -77,12 +77,40 @@ export function useProjects() {
   }, []);
 
   // Clear immediately when user switches (prevents data flash during impersonation)
+  // and subscribe to projects realtime changes for instant updates
   useEffect(() => {
     if (prevUserIdRef.current !== null && prevUserIdRef.current !== activeUserId) {
       setProjects([]);
     }
     prevUserIdRef.current = activeUserId;
     fetchProjects();
+
+    const profile = useAppStore.getState().activeProfile();
+    const orgId = profile?.organization_id;
+    const userId = activeUserId;
+
+    if (!userId) return;
+
+    // Org-scoped realtime for projects list
+    const channelName = `projects_realtime:${orgId ?? userId}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'projects',
+        filter: orgId
+          ? `organization_id=eq.${orgId}`
+          : `user_id=eq.${userId}`,
+      }, () => {
+        // Refetch projects when changes occur in database
+        fetchProjects();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchProjects, activeUserId]);
 
   const createProject = async (input: Partial<Project>): Promise<Project | null> => {
