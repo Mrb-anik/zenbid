@@ -81,7 +81,7 @@ BEGIN
   IF NEW.organization_id IS NOT NULL THEN
     UPDATE public.organizations SET
       name       = COALESCE(NULLIF(NEW.company_name, ''), name),
-      logo_url   = COALESCE(NULLIF(NEW.logo_url, ''),   logo_url),
+      logo_url   = COALESCE(NULLIF(NEW.company_logo, ''),   logo_url),
       updated_at = NOW()
     WHERE id = NEW.organization_id;
   END IF;
@@ -90,7 +90,7 @@ END $$;
 
 DROP TRIGGER IF EXISTS trg_sync_profile_to_org ON public.profiles;
 CREATE TRIGGER trg_sync_profile_to_org
-  AFTER INSERT OR UPDATE OF company_name, logo_url
+  AFTER INSERT OR UPDATE OF company_name, company_logo
   ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.sync_profile_to_org();
 
@@ -102,7 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_org_id
   ON public.projects(organization_id);
 
 CREATE INDEX IF NOT EXISTS idx_organization_members_user
-  ON public.organization_members(user_id);
+  ON public.organization_members(profile_id);
 
 CREATE INDEX IF NOT EXISTS idx_organization_members_org
   ON public.organization_members(organization_id);
