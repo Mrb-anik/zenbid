@@ -29,6 +29,7 @@ import type {
   Profile,
   FeatureFlag,
   UserRole,
+  OrganizationMember,
 } from '../types';
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -53,9 +54,10 @@ export interface OrganizationContextValue {
   impersonation: ImpersonationState | null;
   startImpersonation: (targetProfile: Profile) => Promise<void>;
   stopImpersonation: () => void;
-  // Active profile (impersonated or own)
   activeProfile: Profile | null;
   activeUserId: string | null;
+  // Current member permissions & overrides
+  memberContext: OrganizationMember | null;
   // Refresh org data
   refreshOrganization: () => Promise<void>;
 }
@@ -71,6 +73,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [ownOrganization, setOwnOrganization] = useState<Organization | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+  const [memberContext, setMemberContext] = useState<OrganizationMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonation, setImpersonation] = useState<ImpersonationState | null>(null);
   const [impersonationLogId, setImpersonationLogId] = useState<string | null>(null);
@@ -85,10 +88,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const fetchOrgForProfile = useCallback(async (p: Profile): Promise<{
     org: Organization | null;
     flags: FeatureFlag[];
+    member: OrganizationMember | null;
   }> => {
-    if (!p.organization_id) return { org: null, flags: [] };
+    if (!p.organization_id) return { org: null, flags: [], member: null };
 
-    const [orgResult, flagsResult] = await Promise.all([
+    const [orgResult, flagsResult, memberResult] = await Promise.all([
       supabase
         .from('organizations')
         .select('*')
@@ -98,11 +102,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         .from('feature_flags')
         .select('*')
         .eq('organization_id', p.organization_id),
+      supabase
+        .from('organization_members')
+        .select('*')
+        .eq('organization_id', p.organization_id)
+        .eq('profile_id', p.id)
+        .maybeSingle(),
     ]);
 
     return {
       org: orgResult.error ? null : (orgResult.data as Organization),
       flags: flagsResult.error ? [] : (flagsResult.data as FeatureFlag[]),
+      member: memberResult.error ? null : (memberResult.data as OrganizationMember),
     };
   }, []);
 
@@ -113,20 +124,22 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       setOwnOrganization(null);
       setRole(null);
       setFeatureFlags([]);
+      setMemberContext(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
 
-    fetchOrgForProfile(profile).then(({ org, flags }) => {
+    fetchOrgForProfile(profile).then(({ org, flags, member }) => {
       if (!mountedRef.current) return;
 
       // Only update "live" org if not impersonating
       if (!impersonation) {
         setOrganization(org);
         setFeatureFlags(flags);
-        setRole((profile.role as UserRole) ?? 'viewer');
+        setRole((member?.role || profile.role) as UserRole ?? 'viewer');
+        setMemberContext(member);
       }
       setOwnOrganization(org);
       setLoading(false);
@@ -136,10 +149,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const refreshOrganization = useCallback(async () => {
     const p = impersonation?.targetProfile ?? profile;
     if (!p) return;
-    const { org, flags } = await fetchOrgForProfile(p);
+    const { org, flags, member } = await fetchOrgForProfile(p);
     if (mountedRef.current) {
       setOrganization(org);
       setFeatureFlags(flags);
+      setRole((member?.role || p.role) as UserRole ?? 'viewer');
+      setMemberContext(member);
     }
   }, [impersonation, profile, fetchOrgForProfile]);
 
@@ -151,7 +166,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { org, flags } = await fetchOrgForProfile(targetProfile);
+    const { org, flags, member } = await fetchOrgForProfile(targetProfile);
 
     if (!mountedRef.current) return;
 
@@ -165,7 +180,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     // Override active org to target
     setOrganization(org);
     setFeatureFlags(flags);
-    setRole((targetProfile.role as UserRole) ?? 'viewer');
+    setRole((member?.role || targetProfile.role) as UserRole ?? 'viewer');
+    setMemberContext(member);
 
     // Audit log — non-blocking
     supabase.functions.invoke('impersonation-log', {
@@ -198,6 +214,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
               setFeatureFlags(data as FeatureFlag[]);
             }
           });
+        supabase
+          .from('organization_members')
+          .select('*')
+          .eq('organization_id', profile.organization_id)
+          .eq('profile_id', profile.id)
+          .maybeSingle()
+          .then(({ data }) => {
+             if (data && mountedRef.current) {
+               setMemberContext(data as OrganizationMember);
+               setRole(data.role as UserRole);
+             }
+          });
       }
     }
 
@@ -225,6 +253,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     stopImpersonation,
     activeProfile,
     activeUserId,
+    memberContext,
     refreshOrganization,
   };
 

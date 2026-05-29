@@ -20,11 +20,13 @@ import { Toaster } from 'sonner';
 
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { OrganizationProvider } from './providers/OrganizationProvider';
+import { WhiteLabelProvider } from './providers/WhiteLabelProvider';
 import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { ImpersonationBanner } from './components/layout/ImpersonationBanner';
 import Sidebar from './components/layout/Sidebar';
 import { useAppStore } from './store/useAppStore';
 import { useEffect } from 'react';
+import { usePermissions } from './hooks/usePermissions';
 
 // ─── Eager-loaded (critical path) ─────────────────────────────────
 import Login from './pages/Auth/Login';
@@ -79,17 +81,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
+  const { isAdminPortalAccess } = usePermissions();
 
   if (loading) return <PageSpinner />;
 
-  // Support both new role-based and legacy is_admin check
-  const isStaff = profile?.role === 'platform_owner' ||
-                  profile?.role === 'super_admin' ||
-                  profile?.role === 'agency_admin' ||
-                  profile?.is_admin === true;
-
   if (!profile) return <Navigate to="/dashboard" replace />;
-  if (!isStaff) return <Navigate to="/dashboard" replace />;
+  if (!isAdminPortalAccess) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 }
@@ -166,11 +163,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <ErrorBoundary label="Application" level="app">
-      <AuthProvider>
-        <OrganizationProvider>
-          <AppRoutes />
-        </OrganizationProvider>
-      </AuthProvider>
+      <WhiteLabelProvider>
+        <AuthProvider>
+          <OrganizationProvider>
+            <AppRoutes />
+          </OrganizationProvider>
+        </AuthProvider>
+      </WhiteLabelProvider>
     </ErrorBoundary>
   );
 }

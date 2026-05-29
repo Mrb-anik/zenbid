@@ -3,9 +3,13 @@ import { Building2, Mail, Phone, Save, Upload, Percent, Moon, Sun, Bell, Copy, C
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../api/supabase';
 import { toast } from 'sonner';
+import { usePermissions } from '../hooks/usePermissions';
+import CustomDomainSettings from '../components/settings/CustomDomainSettings';
 
 export default function Settings() {
   const { profile, updateProfile } = useAppStore();
+  const { isAdminPortalAccess, isSuperAdmin, role } = usePermissions();
+  const isOrgOwnerOrAbove = isSuperAdmin || role === 'organization_owner' || role === 'agency_admin';
   const [profileForm, setProfileForm] = useState({
     full_name: profile?.full_name || '',
     company_name: profile?.company_name || '',
@@ -119,11 +123,10 @@ export default function Settings() {
 
   useEffect(() => {
     // Only load wire details for non-admin users
-    const isStaff = profile?.is_admin || profile?.role === 'platform_owner' || profile?.role === 'super_admin';
-    if (!isStaff) {
+    if (!isAdminPortalAccess) {
       fetchWireDetails();
     }
-  }, [profile?.is_admin, profile?.role]);
+  }, [isAdminPortalAccess]);
 
   useEffect(() => {
     if (profile?.id) {
@@ -312,7 +315,7 @@ export default function Settings() {
       </div>
 
       {/* ── ADMIN NOTICE (admin sees different billing section) ── */}
-      {(profile?.is_admin || profile?.role === 'platform_owner' || profile?.role === 'super_admin') && (
+      {isAdminPortalAccess && (
         <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-rose-950/20 border border-rose-700/30">
           <ShieldAlert className="w-5 h-5 text-rose-400 flex-shrink-0" />
           <div>
@@ -411,6 +414,13 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* White Label & Custom Domain (Enterprise/org_owner and above) */}
+      {isOrgOwnerOrAbove && (
+        <div className="bg-white dark:bg-navy border border-app-border dark:border-navy-800 shadow-card rounded-2xl p-6">
+          <CustomDomainSettings />
+        </div>
+      )}
 
       {/* Default Markups */}
       <div className="bg-white dark:bg-navy border border-app-border dark:border-navy-800 shadow-card rounded-2xl overflow-hidden">
@@ -583,7 +593,7 @@ export default function Settings() {
       </div>
 
       {/* ── SUBSCRIPTION & WIRE TRANSFER (non-admin only) ── */}
-      {!(profile?.is_admin || profile?.role === 'platform_owner' || profile?.role === 'super_admin') && (
+      {!isAdminPortalAccess && (
         <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-navy-700 shadow-card bg-gradient-to-br from-slate-900 via-navy-900 to-slate-950 relative">
           <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-copper via-transparent to-transparent pointer-events-none" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-copper/5 rounded-full blur-3xl pointer-events-none" />

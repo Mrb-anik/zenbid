@@ -209,6 +209,10 @@ export interface Organization {
   id: string;
   name: string;
   subdomain?: string;
+  custom_domain?: string;
+  custom_domain_verified?: boolean;
+  cloudflare_hostname_id?: string;
+  cloudflare_ssl_status?: string;
   logo_url?: string;
   billing_tier: BillingTier;
   status?: 'active' | 'trialing' | 'suspended' | 'archived';
@@ -350,6 +354,28 @@ export interface AIUsageLimit {
   last_reset_date: string;
   max_requests_per_minute: number;
   request_counter: number;
+  updated_at: string;
+}
+
+export interface OrganizationQuotas {
+  id: string;
+  organization_id: string;
+  monthly_usage_cents: number;
+  monthly_limit_cents: number;
+  max_users: number;
+  current_users: number;
+  max_estimates_per_month: number;
+  estimates_this_month: number;
+  storage_limit_mb: number;
+  storage_used_mb: number;
+  max_automations?: number;
+  automations_used?: number;
+  max_api_requests_per_month?: number;
+  api_requests_this_month?: number;
+  max_communications_per_month?: number;
+  communications_this_month?: number;
+  expansion_score?: number;
+  upgrade_likelihood?: 'low' | 'medium' | 'high' | 'critical';
   updated_at: string;
 }
 

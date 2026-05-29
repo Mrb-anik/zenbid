@@ -5,6 +5,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import NotificationPanel from './NotificationPanel';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const navItems = [
   { path: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
@@ -38,6 +39,7 @@ export default function Sidebar() {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { isAdminPortalAccess } = usePermissions();
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -145,8 +147,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
         {navItems
           .filter(item => {
-            const isStaff = profile?.is_admin || profile?.role === 'platform_owner' || profile?.role === 'super_admin' || profile?.role === 'agency_admin';
-            return !(item.hideForAdmin && isStaff);
+            return !(item.hideForAdmin && isAdminPortalAccess);
           })
           .map(({ path, label, icon: Icon }) => (
           <NavLink key={path} to={path} className={navLinkClass} onClick={() => setMobileOpen(false)}>
@@ -159,7 +160,7 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
-        {(profile?.is_admin || profile?.role === 'platform_owner' || profile?.role === 'super_admin' || profile?.role === 'agency_admin') && (
+        {(isAdminPortalAccess) && (
           <NavLink
             to="/admin"
             onClick={() => setMobileOpen(false)}

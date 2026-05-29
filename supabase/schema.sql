@@ -16,8 +16,17 @@ CREATE TABLE IF NOT EXISTS public.organizations (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL,
   subdomain text UNIQUE,
+  custom_domain text UNIQUE,
+  custom_domain_verified boolean DEFAULT false,
+  cloudflare_hostname_id text,
+  cloudflare_ssl_status text,
   logo_url text,
   billing_tier text DEFAULT 'free' CHECK (billing_tier IN ('free', 'pro', 'enterprise')),
+  parent_agency_id uuid REFERENCES public.organizations(id) ON DELETE SET NULL,
+  forced_settings jsonb DEFAULT '{}'::jsonb,
+  feature_locks jsonb DEFAULT '{}'::jsonb,
+  white_label_settings jsonb DEFAULT '{}'::jsonb,
+  status text DEFAULT 'active' CHECK (status IN ('active', 'trialing', 'suspended', 'archived')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -29,7 +38,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   organization_id uuid REFERENCES public.organizations(id) ON DELETE SET NULL,
   email text UNIQUE NOT NULL,
   full_name text,
-  role text DEFAULT 'estimator' CHECK (role IN ('super_admin', 'org_admin', 'estimator')),
+  role text DEFAULT 'estimator' CHECK (role IN ('super_admin', 'agency_admin', 'organization_owner', 'manager', 'estimator', 'sales_rep', 'viewer', 'platform_owner')),
+  is_admin boolean DEFAULT false,
   phone text,
   company_name text,
   created_at timestamptz DEFAULT now(),
@@ -191,12 +201,50 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 );
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
--- ─── 11. SaaS AI Limits & Usage Logs ───────────────────────────────────
+-- ─── 11. SaaS AI Limits, Quotas & Usage Logs ────────────────────────────
+CREATE TABLE IF NOT EXISTS public.organization_quotas (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  monthly_usage_cents integer DEFAULT 0,
+  monthly_limit_cents integer DEFAULT 500,
+  max_users integer DEFAULT 3,
+  current_users integer DEFAULT 1,
+  max_estimates_per_month integer DEFAULT 50,
+  estimates_this_month integer DEFAULT 0,
+  storage_limit_mb integer DEFAULT 1024,
+  storage_used_mb integer DEFAULT 0,
+  max_automations integer DEFAULT 5,
+  automations_used integer DEFAULT 0,
+  max_api_requests_per_month integer DEFAULT 1000,
+  api_requests_this_month integer DEFAULT 0,
+  max_communications_per_month integer DEFAULT 500,
+  communications_this_month integer DEFAULT 0,
+  expansion_score numeric DEFAULT 0.0,
+  upgrade_likelihood text DEFAULT 'low' CHECK (upgrade_likelihood IN ('low', 'medium', 'high', 'critical')),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.organization_quotas ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.active_sessions (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  device_fingerprint text,
+  ip_address text,
+  user_agent text,
+  last_seen_at timestamptz DEFAULT now(),
+  revoked_at timestamptz,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.active_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Legacy AI limits compatibility view/table
 CREATE TABLE IF NOT EXISTS public.ai_usage_limits (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE UNIQUE NOT NULL,
   monthly_usage_cents integer DEFAULT 0,
-  monthly_limit_cents integer DEFAULT 500, -- $5.00 free tier defaults
+  monthly_limit_cents integer DEFAULT 500,
   updated_at timestamptz DEFAULT now()
 );
 ALTER TABLE public.ai_usage_limits ENABLE ROW LEVEL SECURITY;
@@ -287,21 +335,52 @@ CREATE TABLE IF NOT EXISTS public.usage_tracking (
 ALTER TABLE public.usage_tracking ENABLE ROW LEVEL SECURITY;
 
 
+CREATE TABLE IF NOT EXISTS public.organization_members (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  profile_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  role text CHECK (role IN ('super_admin', 'agency_admin', 'organization_owner', 'manager', 'estimator', 'sales_rep', 'viewer', 'platform_owner')),
+  permissions jsonb DEFAULT '{}'::jsonb,
+  feature_overrides jsonb DEFAULT '{}'::jsonb,
+  parent_restrictions jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(organization_id, profile_id)
+);
+ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
+
+-- ─── SUPER ADMIN HELPER FUNCTION ──────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() 
+    AND role IN ('super_admin', 'platform_owner')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
 -- ─── ROW LEVEL SECURITY POLICIES ──────────────────────────────────────
 
 -- Profiles
-CREATE POLICY "Users read own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users read own profile" ON public.profiles FOR SELECT USING (auth.uid() = id OR public.is_super_admin());
+CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id OR public.is_super_admin());
 
 -- Organizations
 CREATE POLICY "Users read own organization" ON public.organizations FOR SELECT USING (
   id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  OR parent_agency_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  OR public.is_super_admin()
 );
+CREATE POLICY "Super admin all orgs" ON public.organizations FOR ALL USING (public.is_super_admin());
 
 -- Projects
 CREATE POLICY "Own projects only" ON public.projects FOR ALL USING (
   auth.uid() = user_id OR 
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR
+  public.is_super_admin()
 );
 CREATE POLICY "Public share token read" ON public.projects FOR SELECT USING (share_token is not null);
 CREATE POLICY "Public client approval" ON public.projects FOR UPDATE USING (share_token is not null) WITH CHECK (share_token is not null);
@@ -309,38 +388,41 @@ CREATE POLICY "Public client approval" ON public.projects FOR UPDATE USING (shar
 -- Project Items
 CREATE POLICY "Own items only" ON public.project_items FOR ALL USING (
   auth.uid() = user_id OR 
-  project_id IN (SELECT id FROM public.projects WHERE user_id = auth.uid() OR organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()))
+  project_id IN (SELECT id FROM public.projects WHERE user_id = auth.uid() OR organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())) OR
+  public.is_super_admin()
 );
 CREATE POLICY "Public items read via project" ON public.project_items FOR SELECT USING (
-  exists (SELECT 1 FROM projects p WHERE p.id = project_id AND p.share_token is not null)
+  exists (SELECT 1 FROM public.projects p WHERE p.id = project_id AND p.share_token is not null)
 );
 
 -- Price Book
 CREATE POLICY "Own + global price book" ON public.price_book FOR SELECT USING (
   auth.uid() = user_id OR 
   is_global = true OR 
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR
+  public.is_super_admin()
 );
-CREATE POLICY "Own price book write" ON public.price_book FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Own price book update" ON public.price_book FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Own price book delete" ON public.price_book FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Own price book write" ON public.price_book FOR INSERT WITH CHECK (auth.uid() = user_id OR public.is_super_admin());
+CREATE POLICY "Own price book update" ON public.price_book FOR UPDATE USING (auth.uid() = user_id OR public.is_super_admin());
+CREATE POLICY "Own price book delete" ON public.price_book FOR DELETE USING (auth.uid() = user_id OR public.is_super_admin());
 
 -- Templates
 CREATE POLICY "Read templates" ON public.templates FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR is_global = true
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR is_global = true OR public.is_super_admin()
 );
 CREATE POLICY "Manage templates" ON public.templates FOR ALL USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 
 -- Audit Logs
 CREATE POLICY "Org view audit logs" ON public.audit_logs FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
+CREATE POLICY "Super admin manage audit logs" ON public.audit_logs FOR ALL USING (public.is_super_admin());
 
 -- Proposal Versions
 CREATE POLICY "Org view proposal snapshots" ON public.proposal_versions FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 CREATE POLICY "Public read snapshots via share token" ON public.proposal_versions FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.projects p WHERE p.id = project_id AND p.share_token IS NOT NULL)
@@ -348,31 +430,37 @@ CREATE POLICY "Public read snapshots via share token" ON public.proposal_version
 
 -- Subscriptions
 CREATE POLICY "Org view subscriptions" ON public.subscriptions FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 
 -- AI Limits & Usage
 CREATE POLICY "Org view AI limits" ON public.ai_usage_limits FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 CREATE POLICY "Org view AI logs" ON public.ai_usage_logs FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
+);
+CREATE POLICY "Org quotas read" ON public.organization_quotas FOR SELECT USING (
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
+);
+CREATE POLICY "Active sessions read" ON public.active_sessions FOR SELECT USING (
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 
 -- System Settings
 CREATE POLICY "Read system settings" ON public.system_settings FOR SELECT USING (true);
 CREATE POLICY "Admins edit system settings" ON public.system_settings FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
+  public.is_super_admin()
 );
 
 -- Background Jobs
 CREATE POLICY "Org view background jobs" ON public.background_jobs FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 
 -- Usage Tracking
 CREATE POLICY "Org view usage tracking" ON public.usage_tracking FOR SELECT USING (
-  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) OR public.is_super_admin()
 );
 
 -- Waitlist
@@ -401,12 +489,25 @@ BEGIN
     new_org_id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', 'Professional Estimator'),
-    'org_admin'
+    'organization_owner'
   );
 
   -- Initialize AI limits
   INSERT INTO public.ai_usage_limits (organization_id, monthly_limit_cents)
   VALUES (new_org_id, 500);
+
+  -- Initialize New Quotas system
+  INSERT INTO public.organization_quotas (organization_id, monthly_limit_cents, max_users, max_estimates_per_month)
+  VALUES (new_org_id, 500, 3, 50);
+
+  -- Add to organization_members
+  INSERT INTO public.organization_members (organization_id, profile_id, role, permissions)
+  VALUES (
+    new_org_id,
+    new.id,
+    'organization_owner',
+    '{"all": true}'::jsonb
+  );
 
   RETURN new;
 END;

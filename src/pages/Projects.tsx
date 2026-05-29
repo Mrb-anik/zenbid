@@ -7,6 +7,10 @@ import { formatCurrency } from '../lib/calculations';
 import { TRADE_EMOJIS } from '../types';
 import type { StatusType } from '../types';
 
+import { useQuotas } from '../hooks/useQuotas';
+import QuotaWarningBanner from '../components/billing/QuotaWarningBanner';
+import UpgradeModal from '../components/billing/UpgradeModal';
+
 const STATUS_TABS: { value: StatusType | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'lead', label: 'Lead' },
@@ -24,6 +28,22 @@ export default function Projects() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusType | 'all'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Quota & Billing state
+  const { quotas, pressurePoints, canCreateEstimate } = useQuotas();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeTriggerMetric, setUpgradeTriggerMetric] = useState<any>(undefined);
+
+  const handleNewBidClick = () => {
+    const check = canCreateEstimate();
+    if (check.shouldShowUpgrade) {
+      setUpgradeTriggerMetric(quotas?.estimates);
+      setShowUpgradeModal(true);
+      setShowModal(true); // Open creation modal underneath (grace)
+    } else {
+      setShowModal(true);
+    }
+  };
 
   const filtered = projects.filter(p => {
     const matchSearch = !search ||
@@ -51,7 +71,7 @@ export default function Projects() {
         </div>
         <button
           id="projects-new-bid"
-          onClick={() => setShowModal(true)}
+          onClick={handleNewBidClick}
           className="flex items-center justify-center gap-2 px-5 py-3 bg-copper hover:bg-copper-hover active:bg-copper-600 text-white rounded-xl font-bold text-sm transition-all shadow-md hover:-translate-y-0.5 active:translate-y-0 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
@@ -90,6 +110,18 @@ export default function Projects() {
         </div>
       </div>
 
+      {/* Quota Warning Banner */}
+      {pressurePoints().length > 0 && (
+        <QuotaWarningBanner
+          metrics={pressurePoints()}
+          onUpgradeClick={() => {
+            setUpgradeTriggerMetric(pressurePoints()[0]);
+            setShowUpgradeModal(true);
+          }}
+          className="mb-6"
+        />
+      )}
+
       {/* Table Card Container */}
       <div className="bg-white dark:bg-navy border border-app-border dark:border-navy-800 shadow-card rounded-2xl overflow-hidden">
         {loading ? (
@@ -106,7 +138,7 @@ export default function Projects() {
             </p>
             {!search && statusFilter === 'all' && (
               <button
-                onClick={() => setShowModal(true)}
+                onClick={handleNewBidClick}
                 className="mt-5 px-5 py-2.5 bg-copper hover:bg-copper-hover text-white rounded-xl text-sm font-bold transition-all shadow-md active:translate-y-0 hover:-translate-y-0.5"
               >
                 Create First Project
@@ -193,6 +225,18 @@ export default function Projects() {
           onCreate={createProject}
         />
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        triggerMetric={upgradeTriggerMetric}
+        currentTier={quotas?.billingTier}
+        onUpgrade={(tier) => {
+          setShowUpgradeModal(false);
+          navigate('/settings');
+        }}
+      />
     </div>
   );
 }

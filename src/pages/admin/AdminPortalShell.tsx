@@ -11,6 +11,19 @@
  *   🔄 All other tabs — still in AdminPortal.tsx (Phase 3 extraction)
  *
  * IMPERSONATION BRIDGE:
+/**
+ * AdminPortalShell.tsx — Phase 2 Admin Portal Orchestrator
+ * ─────────────────────────────────────────────────────────────────
+ * Lazy-loading admin portal with extracted tabs.
+ *
+ * PHASE 2 STATUS:
+ *   ✅ SubAccountsTab — fully extracted (replaces AdminPortal sub_accounts)
+ *   ✅ UsageMetricsTab — fully extracted (replaces AdminPortal revenue/churn)
+ *   ✅ FeatureFlagsTab — fully extracted (replaces AdminPortal feature_flags)
+ *   ✅ AuditLogsTab — fully extracted (replaces AdminPortal audit_logs)
+ *   🔄 All other tabs — still in AdminPortal.tsx (Phase 3 extraction)
+ *
+ * IMPERSONATION BRIDGE:
  *   SubAccountsTab calls onImpersonate(profile) →
  *   OrganizationProvider.startImpersonation(profile) →
  *   ImpersonationBanner shows automatically
@@ -21,7 +34,7 @@ import { Suspense, lazy, useState, useCallback, useEffect } from 'react';
 import {
   Building2, BarChart2, Flag, ScrollText, Users, Settings,
   Bot, Mail, ListChecks, Wrench, LayoutTemplate, DollarSign,
-  UserX, CreditCard, Boxes, ChevronRight, Command, Target,
+  UserX, CreditCard, Boxes, ChevronRight, Command, Target, TrendingUp,
 } from 'lucide-react';
 import { ErrorBoundary } from '../../components/layout/ErrorBoundary';
 import { useOrganization } from '../../providers/OrganizationProvider';
@@ -35,13 +48,14 @@ import FeatureFlagsTab from './tabs/FeatureFlagsTab';
 import AuditLogsTab from './tabs/AuditLogsTab';
 import ParentCommandCenterTab from './tabs/ParentCommandCenterTab';
 import RevenueAuditPipelineTab from './tabs/RevenueAuditPipelineTab';
+import QuotaPressureTab from './tabs/QuotaPressureTab';
 
 // ── Legacy monolith for remaining tabs (Phase 3 extraction) ────────
 const AdminPortal = lazy(() => import('../AdminPortal'));
 
 // ─── Tab config ────────────────────────────────────────────────────
 
-type Phase2Tab = 'command_center' | 'revenue_audits' | 'sub_accounts' | 'revenue' | 'feature_flags' | 'audit_logs';
+type Phase2Tab = 'command_center' | 'revenue_audits' | 'sub_accounts' | 'revenue' | 'feature_flags' | 'audit_logs' | 'quota_pressure';
 type LegacyTab = 'members' | 'crm' | 'integrations' | 'support' | 'email_logs' |
                  'waitlist' | 'onboarding' | 'ai_settings' | 'automation' |
                  'templates' | 'broadcast' | 'churn' | 'stripe' | 'billing' | 'pricebook_admin';
@@ -58,6 +72,7 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   { id: 'command_center',  label: 'Command Center', icon: Command,      phase2: true },
   { id: 'revenue_audits',  label: 'Revenue Audits', icon: Target,       phase2: true },
+  { id: 'quota_pressure',  label: 'Quota Pressure', icon: TrendingUp,   phase2: true },
   // Phase 2 — extracted
   { id: 'sub_accounts',    label: 'Sub-Accounts', icon: Building2,    phase2: true },
   { id: 'revenue',         label: 'Usage & Revenue', icon: BarChart2, phase2: true },
@@ -100,7 +115,7 @@ export default function AdminPortalShell() {
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
   const isPhase2 = (id: AdminTab): id is Phase2Tab =>
-    ['command_center', 'revenue_audits', 'sub_accounts', 'revenue', 'feature_flags', 'audit_logs'].includes(id);
+    ['command_center', 'revenue_audits', 'sub_accounts', 'revenue', 'feature_flags', 'audit_logs', 'quota_pressure'].includes(id);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-navy-950">
@@ -136,6 +151,8 @@ export default function AdminPortalShell() {
           {activeTab === 'command_center' && <ParentCommandCenterTab />}
 
           {activeTab === 'revenue_audits' && <RevenueAuditPipelineTab />}
+
+          {activeTab === 'quota_pressure' && <QuotaPressureTab />}
 
           {activeTab === 'sub_accounts' && (
             <SubAccountsTab
